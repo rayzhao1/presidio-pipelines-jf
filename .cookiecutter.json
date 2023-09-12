@@ -1,0 +1,15 @@
+{
+  "_output_dir": "/Users/akhambhati/Repos/presidiodbs.github.com",
+  "_repo_dir": "/Users/akhambhati/.cookiecutters/cookiecutter-hypermodern-python",
+  "_template": "gh:akhambhati/cookiecutter-hypermodern-python",
+  "author": "Ankit Khambhati",
+  "copyright_year": "2023",
+  "development_status": "Development Status :: 4 - Beta",
+  "email": "ankit.khambhati@ucsf.edu",
+  "friendly_name": "Presidio Pipelines",
+  "github_user": "akhambhati",
+  "license": "MIT",
+  "package_name": "presidio_pipelines",
+  "project_name": "presidio-pipelines",
+  "version": "0.0.0"
+}
