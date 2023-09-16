@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "presidio-pipelines"
-version = "0.0.0"
+version = "0.1.0"
 description = "Presidio Pipelines"
 authors = ["Ankit Khambhati <ankit.khambhati@ucsf.edu>"]
 license = "MIT"
@@ -16,8 +16,16 @@ classifiers = [
 Changelog = "https://github.com/akhambhati/presidio-pipelines/releases"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = ">=3.11,<3.13"
 click = ">=8.0.1"
+pyeisen = "^0.1.1"
+numpy = "^1.25.2"
+zappy = {git = "git@github.com:akhambhati/zappy.git"}
+proxyarrays = {git = "git@github.com:FongAnthonyM/python-proxyarrays.git", rev = "v0.5.1"}
+hdf5objects = {git = "git@github.com:FongAnthonyM/python-hdf5objects.git", rev = "v0.4.3-additional_channel_level_axes_maps"}
+presidio-hdf5objects = {git = "git@github.com:ScangosLab/presidio-hdf5objects.git"}
+python-nkhdf5 = {path = "../python-nkhdf5"}
+matplotlib = "^3.7.3"
 
 [tool.poetry.dev-dependencies]
 Pygments = ">=2.10.0"
