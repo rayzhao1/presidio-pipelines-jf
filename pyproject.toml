@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "presidio-pipelines"
-version = "0.0.0"
+version = "0.1.0"
 description = "Presidio Pipelines"
 authors = ["Ankit Khambhati <ankit.khambhati@ucsf.edu>"]
 license = "MIT"
