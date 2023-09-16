@@ -2,3 +2,4 @@
 """
 
 from . import stage_one_preprocess
+from . import stage_one_wavelettransform
