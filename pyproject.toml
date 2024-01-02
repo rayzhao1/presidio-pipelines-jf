@@ -26,6 +26,8 @@ hdf5objects = {git = "git@github.com:FongAnthonyM/python-hdf5objects.git", rev =
 presidio-hdf5objects = {git = "git@github.com:ScangosLab/presidio-hdf5objects.git"}
 python-nkhdf5 = {path = "../python-nkhdf5"}
 matplotlib = "^3.7.3"
+wxpython = "^4.2.1"
+seaborn = "^0.12.2"
 
 [tool.poetry.dev-dependencies]
 Pygments = ">=2.10.0"
