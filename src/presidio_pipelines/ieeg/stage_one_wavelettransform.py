@@ -43,7 +43,6 @@ def Pipeline(path: str):
 
     #
     _, q = zp.sigproc.filters.resample_factor(f_obj['data'].axes[f_obj['data'].attrs['t_axis']]['time_axis'].attrs['sample_rate'], 100)
-    print(q, _)
 
     #
     file = HDF5WaveletData(file=out_path, mode="a", create=True, construct=True)
@@ -53,9 +52,8 @@ def Pipeline(path: str):
     for proc_ii, proc_data in enumerate(tqdm(f_obj["data"][...].T)):
         convolved_signal = convolve.fconv(morlet_fam["kernel"].T, proc_data[:, None]).transpose((1, 0, 2))[:, ::q, :]
         if file_data.shape == (0, 0, 0):#
-            file_data.resize(convolved_signal.shape) #(file["morlet_kernel_data"].shape[0], f_obj["data"].shape[0] // q, f_obj["data"].shape[1])))
-        file_data[:,:,:] = convolved_signal[...]
-        break
+            file_data.resize((convolved_signal.shape[0], convolved_signal.shape[1], f_obj["data"].shape[1])) #(file["morlet_kernel_data"].shape[0], f_obj["data"].shape[0] // q, f_obj["data"].shape[1])))
+        file_data[:,:,[proc_ii]] = convolved_signal[...]
     file_data.axes[1]["time_axis"].append(f_obj["data"].axes[0]["time_axis"][...][::q])
     file_data.axes[2]["channellabel_axis"].append(f_obj["data"].axes[1]["vlabel_axis"][...])
     file_data.axes[2]["channelcoord_axis"].append(f_obj["data"].axes[1]["vcoord_axis"][...])
