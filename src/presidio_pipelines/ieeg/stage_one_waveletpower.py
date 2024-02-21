@@ -24,9 +24,10 @@ def Pipeline(path: str, path_edf_cat: str = None, path_annot: str = None) -> Non
 
     # 
     df_edfcat = pd.read_csv(path_edf_cat)[['edf_start', 'edf_end']]
-    df_edfcat['edf_start'] = pd.to_datetime(df_edfcat['edf_start'])
-    df_edfcat['edf_end'] = pd.to_datetime(df_edfcat['edf_end'])
+    df_edfcat['edf_start'] = pd.to_datetime(df_edfcat['edf_start'], format='ISO8601')
+    df_edfcat['edf_end'] = pd.to_datetime(df_edfcat['edf_end'], format='ISO8601')
 
+    """
     #
     df_annot = pd.read_csv(path_annot)
     df_annot = df_annot[[True if ('artifact' in ev.lower()) else False for ev in df_annot['event_name']]]
@@ -49,6 +50,8 @@ def Pipeline(path: str, path_edf_cat: str = None, path_annot: str = None) -> Non
             if ii == 0:
                 artifact_time.append(((df_edfcat[(df_edfcat['edf_start'] <= df_annot.iloc[ii]['event_timestamp'])]['edf_start'].max()), df_annot.iloc[ii]['event_timestamp']))
     print(artifact_time)
+    """
+    artifact_time = []
 
     #
     spectrogram = (np.abs(f_obj['spectrogram_data'][...].astype(complex))**2).astype(float)
@@ -56,35 +59,37 @@ def Pipeline(path: str, path_edf_cat: str = None, path_annot: str = None) -> Non
         nan_ix = np.flatnonzero((spec_time >= atime[0]) & (spec_time <= atime[1]))
         if len(nan_ix) > 0:
             spectrogram[:, nan_ix, :] = np.nan
-    spectrogram = np.sqrt(np.nanmean(spectrogram, axis=1))[:, None, :]
 
-    #  
-    out_path = path.split('.h5')[0] + '_waveletpower.h5'
-    file = HDF5WaveletData(file=out_path, mode="a", create=True, construct=True)
+    for agg_func, agg_name in [(np.nanmean, 'mean'), (np.nanmedian, 'median')]:
+        spectrogram = np.sqrt(agg_func(spectrogram, axis=1))[:, None, :]
 
-    #
-    file_data = file["morlet_kernel_data"]
-    file_data.resize(f_obj["morlet_kernel_data"].shape)
-    file_data[:, :] = f_obj["morlet_kernel_data"]
-    file_data.axes[1]['time_axis'].resize(f_obj["morlet_kernel_data"].axes[1]['time_axis'].shape)
-    file_data.axes[1]['time_axis'][:] = f_obj["morlet_kernel_data"].axes[1]['time_axis'][:]
-    file_data.axes[0]["kernel_axis"].resize(f_obj["morlet_kernel_data"].axes[0]['kernel_axis'].shape)
-    file_data.axes[0]["kernel_axis"][:] = f_obj["morlet_kernel_data"].axes[0]['kernel_axis'][:]
-    file.close()
+        #  
+        out_path = path.split('.h5')[0] + '_{}waveletpower.h5'.format(agg_name)
+        file = HDF5WaveletData(file=out_path, mode="a", create=True, construct=True)
 
-    #
-    file = HDF5WaveletData(file=out_path, mode="a", create=True, construct=True)
-    file_data = file["spectrogram_data"]
-    file_data.resize(spectrogram.shape)
-    file_data[:, :, :] = spectrogram
-    file_data.axes[1]["time_axis"].append(f_obj["spectrogram_data"].axes[1]["time_axis"][:1])
-    file_data.axes[2]["channellabel_axis"].append(f_obj["spectrogram_data"].axes[2]["channellabel_axis"][...])
-    file_data.axes[2]["channelcoord_axis"].append(f_obj["spectrogram_data"].axes[2]["channelcoord_axis"][...])
-    morlet_refs = file["morlet_kernel_data"]
-    file_data.axes[0]["kerneldata_axis"].resize((morlet_refs.shape[0],))
-    for i in range(morlet_refs.shape[0]):
-        file_data.axes[0]["kerneldata_axis"][i] = (morlet_refs.ref, morlet_refs.regionref[[i], :])
+        #
+        file_data = file["morlet_kernel_data"]
+        file_data.resize(f_obj["morlet_kernel_data"].shape)
+        file_data[:, :] = f_obj["morlet_kernel_data"]
+        file_data.axes[1]['time_axis'].resize(f_obj["morlet_kernel_data"].axes[1]['time_axis'].shape)
+        file_data.axes[1]['time_axis'][:] = f_obj["morlet_kernel_data"].axes[1]['time_axis'][:]
+        file_data.axes[0]["kernel_axis"].resize(f_obj["morlet_kernel_data"].axes[0]['kernel_axis'].shape)
+        file_data.axes[0]["kernel_axis"][:] = f_obj["morlet_kernel_data"].axes[0]['kernel_axis'][:]
+        file.close()
 
-    file.close()
+        #
+        file = HDF5WaveletData(file=out_path, mode="a", create=True, construct=True)
+        file_data = file["spectrogram_data"]
+        file_data.resize(spectrogram.shape)
+        file_data[:, :, :] = spectrogram
+        file_data.axes[1]["time_axis"].append(f_obj["spectrogram_data"].axes[1]["time_axis"][:1])
+        file_data.axes[2]["channellabel_axis"].append(f_obj["spectrogram_data"].axes[2]["channellabel_axis"][...])
+        file_data.axes[2]["channelcoord_axis"].append(f_obj["spectrogram_data"].axes[2]["channelcoord_axis"][...])
+        morlet_refs = file["morlet_kernel_data"]
+        file_data.axes[0]["kerneldata_axis"].resize((morlet_refs.shape[0],))
+        for i in range(morlet_refs.shape[0]):
+            file_data.axes[0]["kerneldata_axis"][i] = (morlet_refs.ref, morlet_refs.regionref[[i], :])
+
+        file.close()
 
     return apply_reader(path=out_path, h5interface=HDF5WaveletData)
