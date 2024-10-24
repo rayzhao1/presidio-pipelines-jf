@@ -24,7 +24,7 @@ zappy = {git = "git@github.com:akhambhati/zappy.git"}
 proxyarrays = {git = "git@github.com:FongAnthonyM/python-proxyarrays.git", rev = "v0.6.0"}
 hdf5objects = {git = "git@github.com:FongAnthonyM/python-hdf5objects.git", rev = "v0.5.0"}
 presidio-hdf5objects = {git = "git@github.com:ScangosLab/presidio-hdf5objects.git"}
-python-nkhdf5 = {path = "../python-nkhdf5"}
+python-nkhdf5 = {git = "git@github.com:ScangosLab/python-nkhdf5.git"}
 matplotlib = "^3.7.3"
 wxpython = "^4.2.1"
 seaborn = "^0.12.2"

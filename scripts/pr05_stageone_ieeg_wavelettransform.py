@@ -16,5 +16,5 @@ if __name__ == '__main__':
     print(h5_files)
     h5_files = [fn for fn in h5_files if (('wavelet' not in fn) & ('preprocess' in fn))]
 
-    pool = Pool(16)
+    pool = Pool()
     pool.map(prespipe.ieeg.stage_one_wavelettransform.Pipeline, h5_files)
