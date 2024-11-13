@@ -11,6 +11,7 @@ from datetime import datetime
 from pyeisen import family, convolve
 from presidio_hdf5objects.dataset.files.hdf5waveletdata import HDF5WaveletData_0_1_0
 import os
+import sys
 
 from .modules import *
 

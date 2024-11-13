@@ -18,7 +18,7 @@ Changelog = "https://github.com/akhambhati/presidio-pipelines/releases"
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
 click = ">=8.0.1"
-pyeisen = "^0.1.1"
+pyeisen = {path = "../pyEisen"}
 numpy = "^1.25.2"
 zappy = {git = "git@github.com:akhambhati/zappy.git"}
 proxyarrays = {git = "git@github.com:FongAnthonyM/python-proxyarrays.git", rev = "v0.6.0"}

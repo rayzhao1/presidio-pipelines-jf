@@ -19,3 +19,6 @@ if __name__ == '__main__':
     print(h5_files)
     for h5_fn in h5_files:
         output = prespipe.ieeg.sleep_stage_align.Pipeline(h5_fn, sleep_stages, edf_meta)
+        s = f"{h5_fn.split('.')[0]}.pkl"
+        print(s)
+        output.to_pickle(s)

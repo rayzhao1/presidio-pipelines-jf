@@ -22,8 +22,10 @@ HDF5WaveletData = HDF5WaveletData_0_1_0
 
 def Pipeline(h5_path: str, output_path: str) -> str:
     #
+    print("sanity")
     print("Flusing stdout...")
     sys.stdout.flush()
+    print("sanity")
 
     #
     f_obj = apply_reader(path=h5_path, h5interface=BaseHDF5ProcessedData)
@@ -69,9 +71,29 @@ def Pipeline(h5_path: str, output_path: str) -> str:
     # Ensure sampling rate >= 2 * 120hz to satisfy Nyquist theorem for Gamma frequencies
     assert f_obj['data'].axes[f_obj['data'].attrs['t_axis']]['time_axis'].attrs['sample_rate'] >= 240
 
+    fp = "C://Users//raymo//ray//ucsf//res.txt"
+    pbar = tqdm(f_obj["data"][...].T, file=open(fp, 'w'))
+
     #
-    for proc_ii, proc_data in enumerate(tqdm(f_obj["data"][...].T)):
-        convolved_signal = convolve.fconv(morlet_fam["kernel"].T, proc_data[:, None]).transpose((1, 0, 2))[:, ::q, :]
+    for proc_ii, proc_data in enumerate(pbar):
+        #
+        pbar.write(f"Iteration {proc_ii}:")
+        pbar.write(f'Shape of morelet kernel being convolved {morlet_fam["kernel"].T.shape}')
+        pbar.write(f'Shape of signal {proc_data[:, None].shape}')
+        #
+
+        convolved_signal = convolve.fconv(morlet_fam["kernel"].T, proc_data[:, None]).transpose((1, 0, 2))
+
+        #
+        pbar.write(f'Shape of convolved signal is {convolved_signal.shape}')
+        #
+
+        convolved_signal = convolve.fconv(morlet_fam["kernel"].T, proc_data[:, None]).transpose((1, 0, 2))[:,::q,:]
+
+        #
+        pbar.write(f'Shape of convolved signal after downsample is is {convolved_signal.shape}')
+        #
+
         if file_data.shape == (0, 0, 0):#
             file_data.resize((convolved_signal.shape[0], convolved_signal.shape[1], f_obj["data"].shape[1])) #(file["morlet_kernel_data"].shape[0], f_obj["data"].shape[0] // q, f_obj["data"].shape[1])))
 

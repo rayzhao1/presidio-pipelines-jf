@@ -1954,17 +1954,19 @@ name = "pyeisen"
 version = "0.1.1"
 description = "PyEisen"
 optional = false
-python-versions = ">=3.11,<3.13"
-files = [
-    {file = "pyeisen-0.1.1-py3-none-any.whl", hash = "sha256:de43d7313f0b7a59262a0f7f7e96bd8238d3d95478f9b7cad5b94c8eda70578e"},
-    {file = "pyeisen-0.1.1.tar.gz", hash = "sha256:20c24b8167ffc8de1ddb16ca462968f5fed6e7121e60215e0ed847f9877a90c4"},
-]
+python-versions = ">=3.10,<3.13"
+files = []
+develop = false
 
 [package.dependencies]
 click = ">=8.0.1"
-numpy = ">=1.25.2,<2.0.0"
-pyfftw = ">=0.13.1,<0.14.0"
-scipy = ">=1.11.2,<2.0.0"
+numpy = "^1.25.2"
+pyfftw = "^0.13.1"
+scipy = "^1.11.2"
+
+[package.source]
+type = "directory"
+url = "../pyEisen"
 
 [[package]]
 name = "pyfftw"
@@ -3032,4 +3034,4 @@ resolved_reference = "858fd29d63aa520dac58c75fdf0d7080eb52a1b3"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.13"
-content-hash = "79cd632fc64e3fda909f2663dd6192f582c5a17699655de83dd240a820296e4e"
+content-hash = "67c02f2da2fa4a4232b773de18dea7e7ced19ed60ae63770447ed1c834ff7e9e"
