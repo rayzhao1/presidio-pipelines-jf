@@ -47,7 +47,6 @@ def Pipeline(h5_path: str, output_path: str, edf_catalog_path: str) -> str:
         new_dt = dt + timedelta(seconds=.5)
         return new_dt.replace(microsecond=0)
 
-    '/data_store0/presidio/nihon_kohden/PR05/nkhdf5/edf_to_hdf5/sub-PR05_ses-stage1_task-continuous_acq-20230623_run-145312_ieeg.h5'
     edf_meta = pd.read_csv(edf_catalog_path)
 
     edf_start = edf_meta.loc[edf_meta["h5_path"] == base_file_name(h5_path)]['edf_start']

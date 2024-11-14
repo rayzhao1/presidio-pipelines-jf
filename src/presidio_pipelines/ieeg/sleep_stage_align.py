@@ -32,16 +32,19 @@ def time_sleep_state_df(h5_path: str, edf_metadata: pd.DataFrame, sleep_stages: 
     h5_start_date = edf_metadata.loc[edf_metadata['h5_path'] == base_name]['edf_start'].item()
     h5_start_date, h5_start_time = h5_start_date.split(" ")
 
-    #h5_start_dt = datetime.strptime(h5_start_time, '%H:%M:%S.%f') # from edf_catalog
+    h5_start_dt = datetime.strptime(h5_start_time, '%H:%M:%S.%f') # from edf_catalog
 
-    h5_start_dt_range = [h5_start_dt + dt for dt in [timedelta(i) for i in [-2, -1, 1, 2]]]
+    h5_start_dt_range = [(h5_start_dt + dt).strftime('%H:%M:%S') for dt in [timedelta(seconds=i) for i in [-2, -1, 0, 1, 2]]]
 
     formatted_start = datetime.strftime(h5_start_dt, '%H:%M:%S')
     print("ALERT")
     print(formatted_start)
     #formatted_start = '00:26:21'
-    start_index = sleep_stages.index[sleep_stages['Time'] in h5_start_dt_range].item()
-    #start_index = sleep_stages.index[sleep_stages['Time'] == formatted_start].item()
+    print(sleep_stages['Time'])
+    print(h5_start_dt_range)
+    print(sleep_stages['Time'].isin(h5_start_dt_range))
+    start_index = sleep_stages.index[sleep_stages['Time'].isin(h5_start_dt_range)].to_list()[0]
+    # start_index = sleep_stages.index[sleep_stages['Time'] == formatted_start].item()
 
     sleep_stage_5min = sleep_stages.iloc[start_index: start_index + 10]
     print(sleep_stage_5min.head(5))
@@ -100,6 +103,8 @@ def Pipeline(h5_path: str, sleep_stages: pd.DataFrame, edf_metadata: pd.DataFram
     channel_labels_array = file_obj['MorletSpectrogram_channellabel_axis'][...][0:150]  # channel labels = 0–149
     assert channel_labels_array.shape == (150, 2), f'`channel_labels_array.shape` is {channel_labels_array.shape}'
 
+    channel_labels = [f'{elem[0].decode()}{elem[1].decode()}' for elem in channel_labels_array]
+
     # Swap spectrogram data to be indexed by channel
     data_array = np.swapaxes(data_array, 0, 2) # indexed by channel
     assert data_array.shape == (150, 10, 50)
@@ -114,8 +119,8 @@ def Pipeline(h5_path: str, sleep_stages: pd.DataFrame, edf_metadata: pd.DataFram
     assert len(times) == 10
     assert len(states) == 10
 
-    states_array = np.tile(states, 7500)
+    states_array = np.tile(states, 7500) # 150 * 10 * 50
 
-    morelet_time_axis = np.apply_along_axis(lambda x: datetime.fromtimestamp(x*1e-9), 1, morelet_time_axis)
+    morelet_time_axis = pd.Series(morelet_time_axis).apply(lambda x: datetime.fromtimestamp(x*1e-9)).to_numpy()
 
     return data_array, states_array, times, morelet_time_axis

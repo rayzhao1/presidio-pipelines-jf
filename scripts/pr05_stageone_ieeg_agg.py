@@ -34,11 +34,7 @@ if __name__ == '__main__':
 
     input_dir_files = glob(os.path.join(h5_input_dir, '*'))
 
-    h5_file = next(fn for fn in input_dir_files if 'preprocess_wavelettransform_meanwaveletpower' in fn)
-
-    print(f'[Preprocess] Working on {len(h5_files)} files: {h5_files}')
-
-    assert input_dir_files == glob(os.path.join(h5_input_dir, '*')), 'Input directly was unexpectedly changed.'
+    h5_file = next(fn for fn in input_dir_files if 'preprocess_wavelettransform_meanwaveletpower' in fn and 'npz' not in fn)
 
     print("Starting per night DataFrame creation...")
     prespipe.ieeg.sleep_stage_agg.Pipeline(h5_file, output_dir, edf_meta_csv)

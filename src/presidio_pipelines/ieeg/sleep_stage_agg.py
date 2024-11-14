@@ -27,7 +27,10 @@ def Pipeline(h5_path: str, edf_path: str, edf_meta_csv: str) -> pd.DataFrame:
 
     all_edfs = glob(os.path.join(edf_path, '*'))
 
-    nights = parse_find(edf_meta_csv, all_edfs, idx=8)
+    print(all_edfs)
+
+    nights = prespipe.ieeg.edf_merge_pr05.parse_find(edf_meta_csv, all_edfs, idx=8)
+
 
     for night_num, night in enumerate(nights):
         waveletpower_arrs = []
@@ -38,7 +41,7 @@ def Pipeline(h5_path: str, edf_path: str, edf_meta_csv: str) -> pd.DataFrame:
             # if `contiguous_interval.t0 is None`, then that contiguous_interval never reached a starting point.
             if len(interval) < 1 or not interval.t0:
                 continue
-            npz_paths = [f'{file[1].split('.')[0]}.npz' for file in interval.files]
+            npz_paths = ["{0}.npz".format(file[1].split('.')[0]) for file in interval.files]
 
             for npz in npz_paths:
                 arrs = np.load(npz, allow_pickle=True)
@@ -63,4 +66,4 @@ def Pipeline(h5_path: str, edf_path: str, edf_meta_csv: str) -> pd.DataFrame:
 
         print(df.to_string())
 
-        df.to_pickle(f'{h5_path.split('.')[0]}_night-{night_num}.pkl')
+        df.to_pickle(f"{h5_path.split('.')[0]}_night-{night_num}.pkl")

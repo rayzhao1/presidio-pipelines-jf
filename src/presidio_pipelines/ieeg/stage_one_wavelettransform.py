@@ -72,23 +72,25 @@ def Pipeline(h5_path: str, output_path: str) -> str:
     assert f_obj['data'].axes[f_obj['data'].attrs['t_axis']]['time_axis'].attrs['sample_rate'] >= 240
 
     #
-    for proc_ii, proc_data in enumerate(tqdm(f_obj["data"][...].T)):
+    for proc_ii, proc_data in enumerate(tqdm(f_obj["data"][:, :].T)):
+        if proc_ii == 1:
+            break
         #
-        pbar.write(f"Iteration {proc_ii}:")
-        pbar.write(f'Shape of morelet kernel being convolved {morlet_fam["kernel"].T.shape}')
-        pbar.write(f'Shape of signal {proc_data[:, None].shape}')
+        #pbar.write(f"Iteration {proc_ii}:")
+        #pbar.write(f'Shape of morelet kernel being convolved {morlet_fam["kernel"].T.shape}')
+        #pbar.write(f'Shape of signal {proc_data[:, None].shape}')
         #
 
         convolved_signal = convolve.fconv(morlet_fam["kernel"].T, proc_data[:, None]).transpose((1, 0, 2))
 
         #
-        pbar.write(f'Shape of convolved signal is {convolved_signal.shape}')
+        #pbar.write(f'Shape of convolved signal is {convolved_signal.shape}')
         #
 
         convolved_signal = convolve.fconv(morlet_fam["kernel"].T, proc_data[:, None]).transpose((1, 0, 2))[:,::q,:]
 
         #
-        pbar.write(f'Shape of convolved signal after downsample is is {convolved_signal.shape}')
+        #pbar.write(f'Shape of convolved signal after downsample is is {convolved_signal.shape}')
         #
 
         if file_data.shape == (0, 0, 0):#

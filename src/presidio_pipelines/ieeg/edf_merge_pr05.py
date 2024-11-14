@@ -1,11 +1,8 @@
 import os
 import shutil
-import mne
 import sys
 import csv
 import datetime
-import numpy as np
-from scipy.signal import detrend
 
 
 FILE_CONCAT_LIMIT: float = float('inf')
@@ -31,87 +28,6 @@ class Interval:
 
     def add(self, file):
         self.files.append(file)
-
-
-def to_edf(edf_path: str):
-    source_path = os.getcwd()
-    os.chdir(EDFS_PATH)
-    raw_edf = mne.io.read_raw_edf(edf_path, preload=True)
-    os.chdir(source_path)
-    return raw_edf
-
-
-def scalp_trim_and_decimate(raw_edf: mne.io.Raw, freq: int) -> mne.io.Raw:
-    """Takes an EDF file path and returns the EDF data as an mne.io.Raw object with:
-        - Only scalp channels included.
-        - Resamples input EDF's frequency to 'freq'.
-    """
-    rename_dict: dict[str: str] = {name: name[4:] for name in raw_edf.ch_names}
-    if "POL EMG1-Ref" in rename_dict:
-        rename_dict["POL EMG1-Ref"] = 'L_EMG-Ref'
-    if "POL EMG2-Ref" in rename_dict:
-        rename_dict["POL EMG2-Ref"] = 'R_EMG-Ref'
-    if 'POL L EOG-Ref' in rename_dict:
-        rename_dict['POL L EOG-Ref'] = 'L_EOG-Ref'
-    if 'POL R EOG-Ref' in rename_dict:
-        rename_dict['POL R EOG-Ref'] = 'R_EOG-Ref'
-
-    raw_edf = raw_edf.rename_channels(rename_dict)
-
-    # Remove non scalp-eeg
-    channels: list[str] = raw_edf.ch_names
-    scalp_start: int = channels.index('Fp1-Ref')
-    print('initial', raw_edf.ch_names)
-    to_drop = channels[:scalp_start] + ['EKG1-Ref', 'EKG2-Ref']
-    raw_scalp = raw_edf.drop_channels(to_drop)
-    print('final', raw_scalp.ch_names)
-
-    # Decimate 2000 hz to 200 hz
-    raw_scalp = raw_scalp.resample(freq)  # internally uses scipy.signal.decimate
-    return raw_scalp
-
-
-def concatenate(lst: list[mne.io.Raw]) -> mne.io.Raw:
-    """Concatenates a list of mne.io.Raw objects and returns result."""
-
-    return mne.concatenate_raws(lst)
-
-
-def scalp_bipolar_reference(raw_edf: mne.io.Raw) -> mne.io.Raw:
-    cathodes = ['Fp1-Ref', 'F7-Ref', 'T7-Ref', 'P7-Ref', 'Fp1-Ref', 'F3-Ref', 'C3-Ref', 'P3-Ref', 'Fz-Ref', 'Cz-Ref',
-                'Fp2-Ref', 'F4-Ref', 'C4-Ref', 'P4-Ref', 'Fp2-Ref', 'F8-Ref', 'T8-Ref', 'P8-Ref', 'L_EOG-Ref',  'R_EOG-Ref', 'L_EMG-Ref']
-    anodes   = ['F7-Ref', 'T7-Ref', 'P7-Ref', 'O1-Ref', 'F3-Ref', 'C3-Ref', 'P3-Ref', 'O1-Ref', 'Cz-Ref', 'Pz-Ref',
-                'F4-Ref', 'C4-Ref', 'P4-Ref', 'O2-Ref', 'F8-Ref', 'T8-Ref', 'P8-Ref', 'O2-Ref', 'A2-Ref', 'A1-Ref', 'R_EMG-Ref']
-    names    = ['Fp1_F7', 'F7_T7', 'T7_P7', 'P7_O1', 'Fp1_F3', 'F3_C3', 'C3_P3', 'P3_O1', 'Fz_Cz', 'Cz_Pz',
-             'Fp2_F4', 'F4_C4', 'C4_P4', 'P4_O2', 'Fp2_F8', 'F8_T8', 'T8_P8', 'P8_O2', 'L-EOG_A2', 'R-EOG_A1', 'L-EMG_R-EMG']
-    assert len(cathodes) == len(anodes) == len(names), 'Incorrect cathodes, anodes, names input to bipolar_reference()'
-    return mne.set_bipolar_reference(raw_edf, anodes, cathodes, names)
-
-
-def average_reference(raw_edf: mne.io.Raw) -> mne.io.Raw:
-    return raw_edf.set_eeg_reference()
-
-
-def export(raw_edf: mne.io.Raw, target_name: str, mode=None, overwrite_existing=True):
-    """Export raw object as EDF file"""
-    name: str = f'{target_name}.edf'
-    match mode:
-        case 'bipolar':
-            mne.export.export_raw(name, scalp_bipolar_reference(raw_edf), 'edf', overwrite=overwrite_existing)
-        case 'common_average':
-            mne.export.export_raw(name, average_reference(raw_edf), 'edf', overwrite=overwrite_existing)
-        case 'bipolar_common_average':
-            mne.export.export_raw(name, average_reference(scalp_bipolar_reference(raw_edf)), 'edf', overwrite=overwrite_existing)
-        case _:  # default
-            mne.export.export_raw(name, raw_edf, 'edf', overwrite=overwrite_existing)
-
-
-def print_edf(raw_edf: mne.io.Raw, name: str) -> None:
-    """Print basic information about an mne.io.Raw object."""
-    # data, time = raw_edf[:, :]
-    print(f'\n\n\n\nTesting {name} EDF:\n')
-    print(raw_edf.info)
-    print('Dim:', raw_edf.get_data().shape[0], 'channels', 'x', raw_edf.get_data().shape[1], 'time points\n\n\n')
 
 
 def write_txt(*args) -> None:
@@ -142,8 +58,6 @@ def parse_find(csv_in: str, all_files=None, idx=None, margin=datetime.timedelta(
     start = start.replace(hour=NIGHT_START_HOUR, minute=0, second=0, microsecond=0)  # Set start date and time
     end: datetime.datetime = start + NIGHT_DURATION  # Set end time
 
-    source_path: str = os.getcwd()
-    os.chdir(PATIENT_PATH)
     nights: list[Night] = []
     curr_night: Night = Night()
     curr_interval: Interval = Interval()
@@ -197,7 +111,6 @@ def parse_find(csv_in: str, all_files=None, idx=None, margin=datetime.timedelta(
         curr_night.add(curr_interval)
         nights.append(curr_night)
 
-    os.chdir(source_path)
     return nights
 
 def verify_pr05_concatenate_ranges(nights):
@@ -259,7 +172,7 @@ if __name__ == "__main__":  # can get rid of
 
     verify_pr05_concatenate_ranges(nights)
 
-    res: mne.io.Raw = None
+    res = None
     # For each night, export one merged file for each continuous time-contiguous_interval for each night.
     for night_num, night in enumerate(nights):
         for interval_num, interval in enumerate(night.intervals):
@@ -277,12 +190,6 @@ if __name__ == "__main__":  # can get rid of
 
             concatenated = concatenate([scalp_trim_and_decimate(to_edf(edf), 200) for edf in interval.files])
             # 1) bandpass for neural data 2) bandstop for electrical noise 3) demean 4) scale
-            res = ((concatenated
-                    .filter(l_freq=0.5, h_freq=80)
-                    .notch_filter(60, notch_widths=4)
-                    .apply_function(detrend, channel_wise=True, type="constant"))
-                    .apply_function(lambda x: x*1e-6, picks="eeg"))
-
-            export(res, out_name, 'bipolar', True)
+            res = concatenated.filter(l_freq=0.5, h_freq=80).notch_filter(60, notch_widths=4).apply_function(lambda x: x*1e-6, picks="eeg")
 
     print("PR05 concatenation completed!")
