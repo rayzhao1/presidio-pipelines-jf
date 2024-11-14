@@ -25,9 +25,9 @@ def average(arr, n):
     end =  n * int(len(arr)/n)
     return np.mean(arr[:end].reshape(-1, n), 1)
 
-def Pipeline(h5_path: str, output_path: str, path_edf_cat: str = None, path_annot: str = None) -> str:
+def Pipeline(h5_path: str, output_path: str, path_edf_cat: str = None, path_annot: str = None, return_start_time=True) -> str:
     #
-    print("Flusing stdout...")
+    print("Flushing stdout...")
     sys.stdout.flush()
 
     #
@@ -92,5 +92,8 @@ def Pipeline(h5_path: str, output_path: str, path_edf_cat: str = None, path_anno
             file_data.axes[0]["kerneldata_axis"][i] = (morlet_refs.ref, morlet_refs.regionref[[i], :])
 
         file.close()
-    return out_path
+    if return_start_time:
+        return out_path, np.array([datetime.fromtimestamp(t/1e9) for t in f_obj['spectrogram_data'].axes[1]['time_axis'][:]])[0]
+    else:
+        return out_path
     # return apply_reader(h5_path=out_path, h5interface=HDF5WaveletData)

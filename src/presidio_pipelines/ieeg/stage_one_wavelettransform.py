@@ -71,11 +71,8 @@ def Pipeline(h5_path: str, output_path: str) -> str:
     # Ensure sampling rate >= 2 * 120hz to satisfy Nyquist theorem for Gamma frequencies
     assert f_obj['data'].axes[f_obj['data'].attrs['t_axis']]['time_axis'].attrs['sample_rate'] >= 240
 
-    fp = "C://Users//raymo//ray//ucsf//res.txt"
-    pbar = tqdm(f_obj["data"][...].T, file=open(fp, 'w'))
-
     #
-    for proc_ii, proc_data in enumerate(pbar):
+    for proc_ii, proc_data in enumerate(tqdm(f_obj["data"][...].T)):
         #
         pbar.write(f"Iteration {proc_ii}:")
         pbar.write(f'Shape of morelet kernel being convolved {morlet_fam["kernel"].T.shape}')

@@ -132,7 +132,7 @@ def get_first_date(csv_in: str) -> datetime.datetime:
         return str_to_time(first_row[3])
 
 
-def parse_find(csv_in: str, all_files: set[str], idx=None, margin=datetime.timedelta(minutes=1)) -> list[Night]:
+def parse_find(csv_in: str, all_files=None, idx=None, margin=datetime.timedelta(minutes=1)) -> list[Night]:
     """Iterate through 'csv_in' and return a list of lists, where each sublist contains an contiguous_interval of EDF file names
        such that each EDF is less than 'margin' away from the previous file in time. This implementation relies on the
        fact that csv_in is sorted in time-chronological order. All returned EDF files are also constrained to be in the
@@ -159,7 +159,7 @@ def parse_find(csv_in: str, all_files: set[str], idx=None, margin=datetime.timed
             curr_time_start: datetime.datetime = str_to_time(row[2])
             curr_time_end: datetime.datetime = str_to_time(row[3])
             # Do not record files earlier than start, or file names that cannot be found in folder.
-            if curr_name not in all_files or curr_time_start < start - margin:
+            if curr_time_start < start - margin or (all_files and curr_name not in all_files):
                 new_interval_flag = True
                 prev_time_end = curr_time_end
                 continue
