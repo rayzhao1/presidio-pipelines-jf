@@ -48,6 +48,7 @@ def map_fn(h5_fn: str, output_dir: str, edf_meta_csv: str, sleep_stages_dict, de
 
     waveletpower_arr, sleep_states_arr, times_artificial, times_h5 = prespipe.ieeg.sleep_stage_align.Pipeline(waveletpower_fn, sleep_stages, edf_meta)
 
+    # Store down numpy arrays storing this h5's wavelet power, sleep states, and 2 time axes
     sleep_state_aligned_fn = f"{waveletpower_fn.split('.')[0]}.npz"
     np.savez(sleep_state_aligned_fn, waveletpower_arr=waveletpower_arr, sleep_states_arr=sleep_states_arr, times_artificial=times_artificial, time_h5=times_h5)
     sleep_state_align_success = sleep_state_aligned_fn in glob(os.path.join(output_dir, '*'))
@@ -66,74 +67,59 @@ def map_fn(h5_fn: str, output_dir: str, edf_meta_csv: str, sleep_stages_dict, de
 
 if __name__ == '__main__':
 
-    """
-    h5_input_dir = SERVER_INPUTS[0] # sys.argv[1]
-
-    output_dir = SERVER_INPUTS[1] # sys.argv[2]
-
-    edf_meta_csv = SERVER_INPUTS[2] # sys.argv[3]
-    """
-
+    # Collect command-line arguments
     assert len(sys.argv) == 5, f'Expected 5, got {sys.argv}'
-
     h5_input_dir = sys.argv[1]
-
     output_dir = sys.argv[2]
-
     edf_meta_csv = sys.argv[3]
-
     sleep_stages_dir = sys.argv[4]
 
-    print(f'[Preprocess] Working in directory {h5_input_dir}')
-
-    print(os.path.join(h5_input_dir, '*'))
-
+    # Retrieve files
     input_dir_files = glob(os.path.join(h5_input_dir, '*'))
-
+    print(f'Working in directory {h5_input_dir}')
     sleep_stages_dir_files = glob(os.path.join(sleep_stages_dir, '*'))
 
-    nights = prespipe.ieeg.edf_merge_pr05.parse_find(edf_meta_csv)
-
+    # Identify per night information (1) Interval for each night (2) files for each night
+    nights = prespipe.ieeg.edf_merge_pr05.parse_find(edf_meta_csv, idx=8)
+    file_count = prespipe.ieeg.edf_merge_pr05.verify_pr05_concatenate_ranges(nights)
     night_time_ranges = []
+    nights_h5_set = set()
 
     for night in nights:
         for interval in night.intervals:
             if len(interval) < 1 or not interval.t0:
                 continue
             night_time_ranges.append((interval.t0, interval.tf))
-
-    # night_time_ranges = [(interval.t0, interval.tf) for interval in [night.intervals for night in nights] if len(interval) >= 1 and interval.t0]
+            nights_h5_set.update(interval.files)
 
     assert len(night_time_ranges) == len(sleep_stages_dir_files), f"{len(night_time_ranges)} vs {len(sleep_stages_dir_files)}"
 
-    num_nights = len(night_time_ranges)
+    h5_files = [fn for fn in input_dir_files if fn in nights_h5_set]
+    assert file_count == len(h5_files), f'file_count = {file_cout} vs. len(h5_files) == {len(h5_files)}'
 
     # https://stackoverflow.com/questions/6832554/multiprocessing-how-do-i-share-a-dict-among-multiple-processes
 
+    # Initialize workers with shared dict
     with Manager() as manager:
         time_to_txt = manager.dict()
 
         for night_num in range(len(sleep_stages_dir_files)):
             fn = os.path.join(sleep_stages_dir, f'PR05_night_{night_num+1}.1 Stages_with_file.txt')
-            time_to_txt[night_time_ranges[night_num]] = fn
-        print("TIME TO TXT DICT")
-        print(time_to_txt)
-        h5_files = [(fn, output_dir, edf_meta_csv, time_to_txt) for fn in input_dir_files if
-                    'preprocess' not in fn]
+            time_to_txt[night_time_ranges[night_num]] = fn # Map interval tuple -> sleep stage .txt
 
-        print(f'[Preprocess] Working on {len(h5_files)} files: {h5_files}')
-        #map_fn(*h5_files[0])
+        # Work on files that have not yet been processed.
+        proc_inputs = [(fn, output_dir, edf_meta_csv, time_to_txt) for fn in h5_files if 'preprocess_wavelettransform_meanwaveletpower' not in fn]
 
-        with manager.Pool() as p:
-            p.starmap(map_fn, h5_files)
+        with manager.Pool(4) as p:
+            p.starmap(map_fn, proc_inputs)
             p.close()
             p.join()
 
-        # h5 structure will be later used.
+        # An arbitrary temporary h5 that stores information to be used later
         map_fn(*h5_files[0], delete=False)
 
+    # Ensure input directory was not mutated.
     assert input_dir_files == glob(os.path.join(h5_input_dir, '*')), 'Input directly was unexpectedly changed.'
-
     print("Success")
 
 
