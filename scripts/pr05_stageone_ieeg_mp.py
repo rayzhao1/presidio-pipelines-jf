@@ -96,6 +96,7 @@ if __name__ == '__main__':
     assert len(night_time_ranges) == len(sleep_stages_dir_files), f"{len(night_time_ranges)} vs {len(sleep_stages_dir_files)}"
 
     h5_files = [fn for fn in input_dir_files if fn in nights_h5_set]
+
     assert file_count == len(h5_files), f'file_count = {file_count} vs. len(h5_files) == {len(h5_files)}'
 
     # https://stackoverflow.com/questions/6832554/multiprocessing-how-do-i-share-a-dict-among-multiple-processes
