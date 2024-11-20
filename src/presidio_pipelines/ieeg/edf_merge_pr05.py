@@ -138,6 +138,7 @@ def verify_pr05_concatenate_ranges(nights):
                                          range(2114, 2246)], 'Night 8 files to be concatenated are wrong.'
     assert len(nights[8].intervals[0].files) == 132 and nights[8].intervals[0].files == [get_num_str(i) for i in
                                          range(2399, 2531)], 'Night 9 files to be concatenated are wrong.'
+    return 9 * 132
 
 
 if __name__ == "__main__":  # can get rid of
