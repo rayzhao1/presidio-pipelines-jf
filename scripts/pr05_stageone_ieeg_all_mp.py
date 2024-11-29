@@ -41,14 +41,14 @@ def map_fn(h5_fn: str, output_dir: str, edf_meta_csv: str, sleep_stages_dict, de
     # Store needed data
     print(f"Creating time aligned dataframe using {waveletpower_fn}")
 
-    #edf_meta = pd.read_csv(edf_meta_csv)
-    #sleep_stages = pd.read_fwf(get_states_file(start_time), names=["Time", "State", "drop1", "drop2"]).drop(["drop1", 'drop2'], axis="columns")
+    edf_meta = pd.read_csv(edf_meta_csv)
+    sleep_stages = pd.read_fwf(get_states_file(start_time), names=["Time", "State", "drop1", "drop2"]).drop(["drop1", 'drop2'], axis="columns")
 
-    waveletpower_arr, times_h5 = prespipe.ieeg.sleep_stage_align.Pipeline(waveletpower_fn, None, None) #sleep_stages, edf_meta)
+    waveletpower_arr, sleep_states_arr, times_artificial, times_h5 = prespipe.ieeg.sleep_stage_align.Pipeline(waveletpower_fn, sleep_stages, edf_meta)
 
     # Store down numpy arrays storing this h5's wavelet power, sleep states, and 2 time axes
     sleep_state_aligned_fn = f"{waveletpower_fn[:-3]}.npz" # can also do .split('.')[0], but risky if CL arg has "."
-    np.savez(sleep_state_aligned_fn, waveletpower_arr=waveletpower_arr, time_h5=times_h5)
+    np.savez(sleep_state_aligned_fn, waveletpower_arr=waveletpower_arr, sleep_states_arr=sleep_states_arr, times_artificial=times_artificial, time_h5=times_h5)
     sleep_state_align_success = sleep_state_aligned_fn in glob(os.path.join(output_dir, '*'))
     print(f"Success? ", sleep_state_align_success)
     if not waveletpower_success:
@@ -70,7 +70,6 @@ if __name__ == '__main__':
     output_dir = sys.argv[2]
     edf_meta_csv = sys.argv[3]
     sleep_stages_dir = sys.argv[4]
-    night_idx = int(sys.argv[5])
 
     # Retrieve files
     input_dir_files = glob(os.path.join(h5_input_dir, '*'))
@@ -87,8 +86,7 @@ if __name__ == '__main__':
             if len(interval) < 1 or not interval.t0:
                 continue
             night_time_ranges.append((interval.t0, interval.tf))
-            if nidx == night_idx:
-                nights_h5_set.update([tup[1] for tup in interval.files])
+            nights_h5_set.update([tup[1] for tup in interval.files])
             nights[nidx].intervals[iidx].files = [tup[0] for tup in interval.files]
 
     file_count = prespipe.ieeg.edf_merge_pr05.verify_pr05_concatenate_ranges(nights)

@@ -6,19 +6,10 @@ import pandas as pd
 import numpy as np
 import os
 from datetime import datetime, timedelta
-
-
 import sys
-#np.set_printoptions(threshold=sys.maxsize)
 
-pd.set_option('display.max_colwidth', None)
-pd.set_option('display.max_rows', 1000)
 
 from .modules import *
-
-#h5file = 'C:\Users\raymo\ray\ucsf\PR05\nkhdf5\New folder\sub-PR05_ses-stage1_task-continuous_acq-20230614_run-102140_ieeg.h5'
-
-res_path = './sub-PR05_ses-stage1_task-continuous_acq-20230614_run-102140_ieeg_preprocess_wavelettransform_meanwaveletpower'
 
 def base_file_name(processed_fn: str) -> str:
     fn = os.path.basename(processed_fn)
@@ -29,29 +20,20 @@ def base_file_name(processed_fn: str) -> str:
 
 def time_sleep_state_df(h5_path: str, edf_metadata: pd.DataFrame, sleep_stages: pd.DataFrame, split=False) -> pd.DataFrame:
     base_name = base_file_name(h5_path)
-    h5_start_date = edf_metadata.loc[edf_metadata['h5_path'] == base_name]['edf_start'].item()
-    h5_start_date, h5_start_time = h5_start_date.split(" ")
+
+    h5_start = edf_metadata.loc[edf_metadata['h5_path'] == base_name]['edf_start'].item()
+    h5_start_date, h5_start_time = h5_start.split(" ")
 
     h5_start_dt = datetime.strptime(h5_start_time, '%H:%M:%S.%f') # from edf_catalog
+    h5_start_dt_range = [(h5_start_dt + dt).strftime('%H:%M:%S') for dt in [timedelta(seconds=i) for i in range(-2, 3)]]
 
-    h5_start_dt_range = [(h5_start_dt + dt).strftime('%H:%M:%S') for dt in [timedelta(seconds=i) for i in [-2, -1, 0, 1, 2]]]
+    # formatted_start = datetime.strftime(h5_start_dt, '%H:%M:%S')
 
-    formatted_start = datetime.strftime(h5_start_dt, '%H:%M:%S')
-    print("ALERT")
-    print(formatted_start)
-    #formatted_start = '00:26:21'
-    print(sleep_stages['Time'])
-    print(h5_start_dt_range)
-    print(sleep_stages['Time'].isin(h5_start_dt_range))
     start_index = sleep_stages.index[sleep_stages['Time'].isin(h5_start_dt_range)].to_list()[0]
-    # start_index = sleep_stages.index[sleep_stages['Time'] == formatted_start].item()
-
     sleep_stage_5min = sleep_stages.iloc[start_index: start_index + 10]
-    print(sleep_stage_5min.head(5))
 
     if split:
         return sleep_stage_5min['State'].to_numpy().astype(int), sleep_stage_5min['Time'].to_numpy()
-
     return sleep_stage_5min
 
 
@@ -76,31 +58,20 @@ def get_channel_freq(h5_path: str):
 
 def Pipeline(h5_path: str, sleep_stages: pd.DataFrame, edf_metadata: pd.DataFrame) -> pd.DataFrame:
 
-
     file_obj = h5py.File(h5_path, 'r')
 
     assert list(file_obj.keys()) == ['MorletFamily', 'MorletFamily_kernel_axis', 'MorletFamily_time_axis', 'MorletSpectrogram', 'MorletSpectrogram_channelcoord_axis', 'MorletSpectrogram_channellabel_axis', 'MorletSpectrogram_kerneldata_axis', 'MorletSpectrogram_time_axis']
-
     assert list(file_obj.attrs.keys()) == ['FileType', 'FileVersion', 'map_namespace', 'map_type', 'pipeline_json', 'subject_id']
 
     morelet_spectrogram = file_obj['MorletSpectrogram']
 
-    # Grab spectrogram
     data_array = np.abs(morelet_spectrogram[...].astype(complex))
-
     morelet_time_axis = file_obj['MorletSpectrogram_time_axis'][...].astype(float)
-
-    assert morelet_time_axis.shape == (10,), f'morelet_time_axis.shape is {morelet_time_axis.shape}'
+    wavelets_freqs = file_obj['MorletFamily_kernel_axis']['CFreq']
+    channel_labels_array = file_obj['MorletSpectrogram_channellabel_axis'][...][0:150]
 
     assert data_array.shape == (50, 10, 150), f'data_array shape {data_array.shape} is incorrect.'
-    # 50 morelet families, 1 ..., 150 channels
-
-    # kernel axis is our frequencies, each wavelet corresponds to a frequency. Center freuqnecies for wavelet.s
-    wavelets_freqs = file_obj['MorletFamily_kernel_axis']['CFreq']
-
     assert wavelets_freqs.shape == (50,), f'`wavelets_freqs.shape` is {wavelets_freqs.shape}'
-
-    channel_labels_array = file_obj['MorletSpectrogram_channellabel_axis'][...][0:150]  # channel labels = 0–149
     assert channel_labels_array.shape == (150, 2), f'`channel_labels_array.shape` is {channel_labels_array.shape}'
 
     channel_labels = [f'{elem[0].decode()}{elem[1].decode()}' for elem in channel_labels_array]
@@ -112,15 +83,14 @@ def Pipeline(h5_path: str, sleep_stages: pd.DataFrame, edf_metadata: pd.DataFram
     data_array = np.swapaxes(data_array, 1, 2)
     assert data_array.shape == (150, 50, 10)
 
-    # Produce time: state data
-    states, times = time_sleep_state_df(h5_path, edf_metadata, sleep_stages, True)
+    # Produce time: state data, 11/28 handle time and states in aggregate
+    # states, times = time_sleep_state_df(h5_path, edf_metadata, sleep_stages, True)
     assert len(channel_labels) == 150
     assert len(wavelets_freqs) == 50
-    assert len(times) == 10
-    assert len(states) == 10
-
-    states_array = np.tile(states, 7500) # 150 * 10 * 50
+    # assert len(times) == 10
+    assert len(morelet_time_axis) == 10
+    # assert len(states) == 10
 
     morelet_time_axis = pd.Series(morelet_time_axis).apply(lambda x: datetime.fromtimestamp(x*1e-9)).to_numpy()
 
-    return data_array, states_array, times, morelet_time_axis
+    return data_array, morelet_time_axis

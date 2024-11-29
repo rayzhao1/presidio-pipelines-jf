@@ -15,17 +15,10 @@ from .modules import *
 
 import sys
 
-sys.stdout.flush()
-
 BaseHDF5ProcessedData = BaseHDF5ProcessedData_0_1_0
 HDF5WaveletData = HDF5WaveletData_0_1_0
 
 def Pipeline(h5_path: str, output_path: str) -> str:
-    #
-    print("sanity")
-    print("Flusing stdout...")
-    sys.stdout.flush()
-    print("sanity")
 
     #
     f_obj = apply_reader(path=h5_path, h5interface=BaseHDF5ProcessedData)
@@ -52,17 +45,11 @@ def Pipeline(h5_path: str, output_path: str) -> str:
     file_data.axes[0]["kernel_axis"][:] = params_tups
     file.close()
 
-    #
-
-    _, old_q = zp.sigproc.filters.resample_factor(
-        f_obj['data'].axes[f_obj['data'].attrs['t_axis']]['time_axis'].attrs['sample_rate'], 100)
-    #
-
     new_sample_rate = 1
     _, q = zp.sigproc.filters.resample_factor(f_obj['data'].axes[f_obj['data'].attrs['t_axis']]['time_axis'].attrs['sample_rate'], new_sample_rate)
 
     # Data validation
-    assert old_q == 10 and q == 1000, 'Downsample was not successfully completed.'
+    assert q == 1000, 'Downsample was not successfully completed.'
 
     #
     file = HDF5WaveletData(file=out_path, mode="a", create=True, construct=True)
@@ -78,9 +65,8 @@ def Pipeline(h5_path: str, output_path: str) -> str:
         if file_data.shape == (0, 0, 0):#
             file_data.resize((convolved_signal.shape[0], convolved_signal.shape[1], f_obj["data"].shape[1])) #(file["morlet_kernel_data"].shape[0], f_obj["data"].shape[0] // q, f_obj["data"].shape[1])))
 
-        # ellipses selection fails for some reason:
-        #  = convolved_signal[...] -> TypeError: Broadcasting is not supported for complex selections
         file_data[:,:,[proc_ii]] = convolved_signal[:, :, :]
+
     file_data.axes[1]["time_axis"].append(f_obj["data"].axes[0]["time_axis"][...][::q])
     file_data.axes[2]["channellabel_axis"].append(f_obj["data"].axes[1]["vlabel_axis"][...])
     file_data.axes[2]["channelcoord_axis"].append(f_obj["data"].axes[1]["vcoord_axis"][...])
@@ -88,6 +74,7 @@ def Pipeline(h5_path: str, output_path: str) -> str:
     file_data.axes[0]["kerneldata_axis"].resize((morlet_refs.shape[0],))
     for i in range(morlet_refs.shape[0]):
         file_data.axes[0]["kerneldata_axis"][i] = (morlet_refs.ref, morlet_refs.regionref[[i], :])
+
     file.close()
 
     return out_path
