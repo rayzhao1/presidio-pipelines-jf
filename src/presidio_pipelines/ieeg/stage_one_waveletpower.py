@@ -20,26 +20,14 @@ HDF5WaveletData = HDF5WaveletData_0_1_0
 def mean_downsample(arr, n):
     return np.nanmean(np.reshape(arr, (-1, n)), 1)
 
-def Pipeline(h5_path: str, output_path: str, path_edf_cat: str = None, path_annot: str = None, return_start_time=True) -> str:
-
-    #
+def Pipeline(h5_path: str, output_path: str, return_start_time=True) -> str:
     f_obj = apply_reader(path=h5_path, h5interface=HDF5WaveletData)
-    spec_time = f_obj['spectrogram_data'].axes[1]['time_axis'][:]
-    spec_time = np.array([datetime.fromtimestamp(t/1e9) for t in spec_time])
-    spec_time = spec_time[:f_obj['spectrogram_data'].shape[1]]
 
-    #
-    df_edfcat = pd.read_csv(path_edf_cat)[['edf_start', 'edf_end']]
-    df_edfcat['edf_start'] = pd.to_datetime(df_edfcat['edf_start'], format='ISO8601')
-    df_edfcat['edf_end'] = pd.to_datetime(df_edfcat['edf_end'], format='ISO8601')
-
-    #
     spectrogram = (np.abs(f_obj['spectrogram_data'][...].astype(complex))**2).astype(float)
-
     spectrogram = np.sqrt(np.apply_along_axis(mean_downsample, 1, spectrogram, n=30))
 
     #
-    out_path = os.path.join(output_path, f'{os.path.basename(h5_path)[:-3]}_{agg_name}waveletpower.h5')
+    out_path = os.path.join(output_path, f'{os.path.basename(h5_path)[:-3]}_meanwaveletpower.h5')
     file = HDF5WaveletData(file=out_path, mode="a", create=True, construct=True)
 
     #

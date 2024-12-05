@@ -52,15 +52,12 @@ def Pipeline(h5_path: str, output_path: str, edf_catalog_path: str) -> str:
 
     edf_start = edf_meta.loc[edf_meta["h5_path"] == base_file_name(h5_path)]['edf_start']
     edf_end = edf_meta.loc[edf_meta["h5_path"] == base_file_name(h5_path)]['edf_end']
-    edf_nsample = edf_meta.loc[edf_meta["h5_path"] == base_file_name(h5_path)]['edf_nsample']
-
-    assert edf_start.shape == (1,), f'edf_start.shape is {edf_start.shape}'
-    assert edf_end.shape == (1,), f'edf_start.shape is {edf_end.shape}'
+    edf_nsample = edf_meta.loc[edf_meta["h5_path"] == base_file_name(h5_path)]['edf_nsample'].item()
 
     edf_start = datetime.strptime(edf_start.item(), '%Y-%m-%d %H:%M:%S.%f')
     edf_end = datetime.strptime(edf_end.item(), '%Y-%m-%d %H:%M:%S.%f')
 
-    h5_start = round_seconds(from_unix_epoch(time_axis[0]))
+    h5_start = from_unix_epoch(time_axis[0])
     h5_end = round_seconds(from_unix_epoch(time_axis[-1]))
 
     assert edf_start == h5_start, f'edf_start == {edf_start} and h5_start == {h5_start}'

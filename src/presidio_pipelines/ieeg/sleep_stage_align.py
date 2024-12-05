@@ -56,7 +56,7 @@ def get_channel_freq(h5_path: str):
 
 
 
-def Pipeline(h5_path: str, sleep_stages: pd.DataFrame, edf_metadata: pd.DataFrame) -> pd.DataFrame:
+def Pipeline(h5_path: str):
 
     file_obj = h5py.File(h5_path, 'r')
 
@@ -90,7 +90,5 @@ def Pipeline(h5_path: str, sleep_stages: pd.DataFrame, edf_metadata: pd.DataFram
     # assert len(times) == 10
     assert len(morelet_time_axis) == 10
     # assert len(states) == 10
-
-    morelet_time_axis = pd.Series(morelet_time_axis).apply(lambda x: datetime.fromtimestamp(x*1e-9)).to_numpy()
 
     return data_array, morelet_time_axis

@@ -8,12 +8,12 @@ import numpy as np
 from collections import Counter
 
 if __name__ == '__main__':
-    assert len(sys.argv) == 6, f'Expected 5, got {sys.argv}'
+    assert len(sys.argv) == 6, f'Expected 6, got {sys.argv}'
 
     h5_input_dir = sys.argv[1]
     output_dir = sys.argv[2]
     edf_meta_csv = sys.argv[3]
-    edf_dir = sys.argv[4]
+    sleep_stages_dir = sys.argv[4]
     night_idx = int(sys.argv[5])
 
     print(f'[Preprocess] Working in directory {h5_input_dir}')
@@ -22,8 +22,7 @@ if __name__ == '__main__':
 
     h5_file = next(fn for fn in input_dir_files if 'preprocess_wavelettransform_meanwaveletpower' in fn and 'npz' not in fn)
 
-    all_edfs = glob(os.path.join(edf_dir, '*'))
-    nights = prespipe.ieeg.edf_merge_pr05.parse_find(edf_meta_csv, all_edfs, idx=8)
+    nights = prespipe.ieeg.edf_merge_pr05.parse_find(edf_meta_csv, idx=8)
     ordered_npz_paths = []
 
     for night_num, night in enumerate(nights):
@@ -40,7 +39,7 @@ if __name__ == '__main__':
     #assert Counter(input_npz_files) == Counter(ordered_npz_paths), 'Did not receive expected npz files.'
 
     print("Starting single night DataFrame creation...")
-    prespipe.ieeg.sleep_stage_agg.Pipeline(output_dir, h5_file, input_npz_files, night_idx)
+    prespipe.ieeg.sleep_stage_agg.Pipeline(output_dir, h5_file, input_npz_files, sleep_stages_dir, night_idx)
 
     assert input_dir_files == glob(os.path.join(h5_input_dir, '*'))
     print("Success")

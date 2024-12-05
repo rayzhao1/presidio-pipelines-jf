@@ -6,11 +6,46 @@ import pandas as pd
 import numpy as np
 import os
 import presidio_pipelines as prespipe
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 from glob import glob
+import pytz
 
+def stage_mean_power(stages, arr, stage, validation):
+    """Given the mean wavelets for one night, produce the mean and SD
+       of these wavelets at a specified stage for each channel across
+       all frequencies. The time axis is collapsed.
+    """
+    assert arr.shape == (150, 1320, 50) # 150 channels, 1320 samples, 50 freqs
 
-def Pipeline(output_dir, h5_path, npz_paths: str, night_idx: int) -> pd.DataFrame:
+    # Produce bitmap of indices corresponding to specified stage.
+    mask = stages==stage
+    assert mask.shape == (1320,)
+
+    # Filter for samples of the desired stage using bitmap
+    stage_arrs = arr[:, mask, :]
+    assert stage_arrs.shape == (150, np.sum(mask), 50), f'stage_arrs.shape is {stage_arrs.shape}'
+
+    # Compute mean and std of power across all frequencies, killing the second dimension
+    stage_means = np.apply_along_axis(np.nanmean, 1, stage_arrs)
+    stage_stds = np.apply_along_axis(np.nanstd, 1, stage_arrs)
+    assert stage_means.shape == (150, 50), f'stage_means.shape is {stage_means.shape}'
+    assert stage_stds.shape == (150, 50), f'stage_stds.shape is {stage_stds.shape}'
+
+    return stage_means, stage_stds, validation + mask
+
+def convert(s, d):
+    """Helper function to convert timestamp 's', ex. '22:12', into a datetime where day is specified by 'd'."""
+    if int(s[:2]) in range(20, 24):
+        return datetime.strptime(s, '%H:%M:%S').replace(year=d.year, month=d.month, day=d.day)
+    return datetime.strptime(s, '%H:%M:%S').replace(year=d.year, month=d.month, day=d.day+1)
+
+def process_stages(df, start_dt):
+    """Process scored output files for a day into np arrays."""
+    states = df['State'].values.astype(int)
+    times = np.array([convert(t, start_dt) for t in df['Time'].values])
+    return times, states
+
+def Pipeline(output_dir, h5_path, npz_paths: str, sleep_stages_dir: str, night_idx: int) -> pd.DataFrame:
     file_obj = h5py.File(h5_path, 'r')
     assert list(file_obj.keys()) == ['MorletFamily', 'MorletFamily_kernel_axis', 'MorletFamily_time_axis', 'MorletSpectrogram', 'MorletSpectrogram_channelcoord_axis', 'MorletSpectrogram_channellabel_axis', 'MorletSpectrogram_kerneldata_axis', 'MorletSpectrogram_time_axis']
     assert list(file_obj.attrs.keys()) == ['FileType', 'FileVersion', 'map_namespace', 'map_type', 'pipeline_json', 'subject_id']
@@ -18,39 +53,33 @@ def Pipeline(output_dir, h5_path, npz_paths: str, night_idx: int) -> pd.DataFram
     channel_labels_array = file_obj['MorletSpectrogram_channellabel_axis'][...][0:150]  # channel labels = 0–149
     assert channel_labels_array.shape == (150, 2), f'`channel_labels_array.shape` is {channel_labels_array.shape}'
 
+    sleep_stages_fn = os.path.join(sleep_stages_dir, f'PR05_night_{night_idx + 1}.1 Stages_with_file.txt')
+    sleep_stages_df = pd.read_fwf(sleep_stages_fn, names=["Time", "State", "drop1", "drop2"]).drop(["drop1", 'drop2'], axis="columns")
+
     waveletpower_arrs = []
-    sleep_states_arrs = []
-    time_axis = []
     time_axis_h5 = []
 
     for npz in npz_paths: # Already ordered.
         arrs = np.load(npz, allow_pickle=True)
 
         wavelets = arrs['waveletpower_arr']
-        states = arrs['sleep_states_arr']
-        # times_artificial = arrs['times_artificial']
         times_h5 = arrs['time_h5']
 
         assert wavelets.shape == (150, 50, 10)
-        assert states.shape == (75000,)
-        # assert times_artificial.shape == (10,)
         assert times_h5.shape == (10,)
 
         waveletpower_arrs.append(wavelets)
-        sleep_states_arrs.append(states)
-        # time_axis.append(times_artificial)
         time_axis_h5.append(times_h5)
 
     waveletpower = np.dstack(waveletpower_arrs)
-    sleep_states = pd.Series(np.tile(np.hstack(sleep_states_arrs), 150*50))
     wavelets_freqs = file_obj['MorletFamily_kernel_axis']['CFreq']
     channel_labels = [f'{elem[0].decode()}{elem[1].decode()}' for elem in channel_labels_array]
     times = np.hstack(time_axis_h5)
 
-    df_state = pd.read_fwf(state_fn, names=["Time", "State", "drop1", "drop2"]).drop(["drop1", 'drop2'], axis="columns")
+    morelet_time_axis = [pd.Timestamp(dt).to_pydatetime() for dt in times]
 
-    txt_times = df_state['Time'].values
-    morelet_time_axis = np.apply_along_axis(lambda x: datetime.fromtimestamp(x * 1e-9), 0, times)
+    txt_times, txt_stages = process_stages(sleep_stages_df, morelet_time_axis[0])
+    sleep_states = np.tile(txt_stages, 150 * 50)
 
     assert len(morelet_time_axis) == len(txt_times)
     assert np.all(np.abs(txt_times - morelet_time_axis) <= timedelta(seconds=1))
@@ -61,16 +90,49 @@ def Pipeline(output_dir, h5_path, npz_paths: str, night_idx: int) -> pd.DataFram
     assert len(channel_labels) == 150
     assert len(times) == 10*132
 
-    # Glues together Channel, Freq, and Time as in index.
+    # (1) Produce stage aligned wavelet power DataFrame
     multi_idx = pd.MultiIndex.from_product([channel_labels, wavelets_freqs, times],
                                            names=['Channel', 'Frequency', 'Time'])
 
-    res = pd.Series(index=multi_idx, data=waveletpower.flatten())
-    df = res.to_frame().rename(columns={0: 'Power'})
-    df['State'] = sleep_states.values
+    df = pd.DataFrame(index=multi_idx, data={"Power": waveletpower.flatten(), "State": sleep_states})
 
     assert all(df.columns == pd.Index(['Power', 'State'], dtype='object'))
     assert df.shape == (9900000, 2)
 
     out_fn = os.path.join(output_dir, f"night-{night_idx}-df.pkl")
+    df.to_pickle(out_fn)
+
+    # (2) Produce per stage wavelet power DataFrame
+    waveletpower = np.swapaxes(waveletpower, 1, 2)
+    assert waveletpower.shape == (150, 1320, 50)
+
+    sleep_stages = ['Artifact', 'N1', 'N2', 'N3', 'REM', 'Wake']
+    sleep_stages_map = {'Artifact': 0, 'N1': 1, 'N2': 2, 'N3': 3, 'REM': 5, 'Wake': 7}
+
+    stage_wavelet_mean_arrs = []
+    stage_wavelet_std_arrs = []
+
+    # A bitmap s = [0, 0, ..., 0] representing how many times the value at each index is used.
+    # If the algorithm is correct, each sample is used once and sum(s) == len(times) == 1320
+    validation_arr = np.zeros(1320)
+
+    for stage in sleep_stages:
+        mu, sd, validation_arr = stage_mean_power(txt_stages, waveletpower, sleep_stages_map[stage], validation_arr)
+        stage_wavelet_mean_arrs.append(mu.flatten())
+        stage_wavelet_std_arrs.append(sd.flatten())
+
+    stage_wavelet_means = np.hstack(stage_wavelet_mean_arrs)
+    stage_wavelet_stds = np.hstack(stage_wavelet_std_arrs)
+
+    assert np.sum(validation_arr) == 1320, f'np.sum(validation_arr) == {np.sum(validation_arr)}'
+    assert stage_wavelet_means.shape == (45000,), f'stage_wavelet_means.shape is {stage_wavelet_means.shape}'
+    assert stage_wavelet_stds.shape == (45000,), f'stage_wavelet_stds.shape is {stage_wavelet_stds.shape}'
+
+    multi_idx = pd.MultiIndex.from_product([channel_labels, sleep_stages, wavelets_freqs],
+                                           names=['Channel', 'Stage', 'Frequency'])
+
+    df = pd.DataFrame(index=multi_idx, data={"Power": stage_wavelet_means.flatten(), "Error": stage_wavelet_stds})
+    print(df)
+
+    out_fn = os.path.join(output_dir, f"night-{night_idx}-stage-df.pkl")
     df.to_pickle(out_fn)
