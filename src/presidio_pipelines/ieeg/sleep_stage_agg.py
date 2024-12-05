@@ -23,6 +23,7 @@ def stage_mean_power(stages, arr, stage, validation):
 
     # Filter for samples of the desired stage using bitmap
     stage_arrs = arr[:, mask, :]
+    print(np.sum(mask))
     assert stage_arrs.shape == (150, np.sum(mask), 50), f'stage_arrs.shape is {stage_arrs.shape}'
 
     # Compute mean and std of power across all frequencies, killing the second dimension
@@ -106,8 +107,8 @@ def Pipeline(output_dir, h5_path, npz_paths: str, sleep_stages_dir: str, night_i
     waveletpower = np.swapaxes(waveletpower, 1, 2)
     assert waveletpower.shape == (150, 1320, 50)
 
-    sleep_stages = ['Artifact', 'N1', 'N2', 'N3', 'REM', 'Wake']
-    sleep_stages_map = {'Artifact': 0, 'N1': 1, 'N2': 2, 'N3': 3, 'REM': 5, 'Wake': 7}
+    sleep_stages = ['Wake', 'N1', 'N2', 'N3', 'REM']
+    sleep_stages_map = {'Wake': 0, 'N1': 1, 'N2': 2, 'N3': 3, 'REM': 5}
 
     stage_wavelet_mean_arrs = []
     stage_wavelet_std_arrs = []
@@ -125,14 +126,14 @@ def Pipeline(output_dir, h5_path, npz_paths: str, sleep_stages_dir: str, night_i
     stage_wavelet_stds = np.hstack(stage_wavelet_std_arrs)
 
     assert np.sum(validation_arr) == 1320, f'np.sum(validation_arr) == {np.sum(validation_arr)}'
-    assert stage_wavelet_means.shape == (45000,), f'stage_wavelet_means.shape is {stage_wavelet_means.shape}'
-    assert stage_wavelet_stds.shape == (45000,), f'stage_wavelet_stds.shape is {stage_wavelet_stds.shape}'
+    assert stage_wavelet_means.shape == (37500,), f'stage_wavelet_means.shape is {stage_wavelet_means.shape}'
+    assert stage_wavelet_stds.shape == (37500,), f'stage_wavelet_stds.shape is {stage_wavelet_stds.shape}'
 
     multi_idx = pd.MultiIndex.from_product([channel_labels, sleep_stages, wavelets_freqs],
                                            names=['Channel', 'Stage', 'Frequency'])
 
     df = pd.DataFrame(index=multi_idx, data={"Power": stage_wavelet_means.flatten(), "Error": stage_wavelet_stds})
-    print(df)
+    # print(df.to_string())
 
     out_fn = os.path.join(output_dir, f"night-{night_idx}-stage-df.pkl")
     df.to_pickle(out_fn)
