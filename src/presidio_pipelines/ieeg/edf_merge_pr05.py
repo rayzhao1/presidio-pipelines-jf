@@ -140,6 +140,31 @@ def verify_pr05_concatenate_ranges(nights):
                                          range(2399, 2531)], 'Night 9 files to be concatenated are wrong.'
     return 9 * 132
 
+def get_night_files(night_idx, edf_meta_csv, input_files=[], item_idx=None):
+    """Produce an ordered list of 'item_idx'th entry of 'edf_meta_csv' for night 'night_idx'
+       corresponding to files that are in 'input_files'.
+       - Eg. get_night_files(0, csv, lst, 8) -> Get an ordered list of the h5_paths of the 1st
+         night, given that the file exists in lst.
+    """
+    nights = parse_find(edf_meta_csv, idx=item_idx)
+    item_lst = []
+    for nidx, night in enumerate(nights):
+        for iidx, interval in enumerate(night.intervals):
+            if len(interval) < 1 or not interval.t0:
+                continue
+            if nidx == night_idx:
+                item_lst.extend([tup[1] for tup in interval.files])
+            # Modify interval files so they are in right format to be verifed.
+            nights[nidx].intervals[iidx].files = [tup[0] for tup in interval.files]
+
+    verify_pr05_concatenate_ranges(nights)
+
+    assert len(item_lst) == 132
+    dirname = ''
+    if input_files:
+        dirname = os.path.dirname(input_files[0])
+        input_files = set([os.path.basename(fn).split('.')[0] for fn in input_files])
+    return [os.path.join(dirname, os.path.basename(i)) for i in item_lst if os.path.basename(i).split('.')[0] in input_files] or item_lst
 
 if __name__ == "__main__":  # can get rid of
     # Process command-line args

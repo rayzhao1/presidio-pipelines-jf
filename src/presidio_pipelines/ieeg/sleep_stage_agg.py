@@ -5,6 +5,7 @@ import h5py
 import pandas as pd
 import numpy as np
 import os
+import scipy
 import presidio_pipelines as prespipe
 from datetime import datetime, date, timedelta
 from glob import glob
@@ -28,7 +29,7 @@ def stage_mean_power(stages, arr, stage, validation):
 
     # Compute mean and std of power across all frequencies, killing the second dimension
     stage_means = np.apply_along_axis(np.nanmean, 1, stage_arrs)
-    stage_stds = np.apply_along_axis(np.nanstd, 1, stage_arrs)
+    stage_stds = np.apply_along_axis(np.nanstd, 1, stage_arrs)# /np.sum(mask)
     assert stage_means.shape == (150, 50), f'stage_means.shape is {stage_means.shape}'
     assert stage_stds.shape == (150, 50), f'stage_stds.shape is {stage_stds.shape}'
 
@@ -46,8 +47,9 @@ def process_stages(df, start_dt):
     times = np.array([convert(t, start_dt) for t in df['Time'].values])
     return times, states
 
-def Pipeline(output_dir, h5_path, npz_paths: str, sleep_stages_dir: str, night_idx: int) -> pd.DataFrame:
+def Pipeline(output_dir, h5_path, npz_paths: list[str], sleep_stages_dir: str, night_idx: int) -> pd.DataFrame:
     file_obj = h5py.File(h5_path, 'r')
+    print(h5_path)
     assert list(file_obj.keys()) == ['MorletFamily', 'MorletFamily_kernel_axis', 'MorletFamily_time_axis', 'MorletSpectrogram', 'MorletSpectrogram_channelcoord_axis', 'MorletSpectrogram_channellabel_axis', 'MorletSpectrogram_kerneldata_axis', 'MorletSpectrogram_time_axis']
     assert list(file_obj.attrs.keys()) == ['FileType', 'FileVersion', 'map_namespace', 'map_type', 'pipeline_json', 'subject_id']
 
@@ -100,11 +102,21 @@ def Pipeline(output_dir, h5_path, npz_paths: str, sleep_stages_dir: str, night_i
     assert all(df.columns == pd.Index(['Power', 'State'], dtype='object'))
     assert df.shape == (9900000, 2)
 
+    mat = np.swapaxes(waveletpower, 0, 2)
+    assert mat.shape == (1320, 50, 150)
+    assert txt_stages.shape == (1320,)
+
+    mat_fn = os.path.join(output_dir, 'pr05_night1')
+    print(mat_fn)
+
+    #scipy.io.savemat(mat_fn, {'wavelet_power': mat, 'sleep_stages': txt_stages}, appendmat=True)
+
     out_fn = os.path.join(output_dir, f"night-{night_idx}-df.pkl")
     df.to_pickle(out_fn)
 
     # (2) Produce per stage wavelet power DataFrame
     waveletpower = np.swapaxes(waveletpower, 1, 2)
+    #np.save(f'{out_fn[:-7]}.npy', waveletpower)
     assert waveletpower.shape == (150, 1320, 50)
 
     sleep_stages = ['Wake', 'N1', 'N2', 'N3', 'REM']
@@ -132,7 +144,9 @@ def Pipeline(output_dir, h5_path, npz_paths: str, sleep_stages_dir: str, night_i
     multi_idx = pd.MultiIndex.from_product([channel_labels, sleep_stages, wavelets_freqs],
                                            names=['Channel', 'Stage', 'Frequency'])
 
-    df = pd.DataFrame(index=multi_idx, data={"Power": stage_wavelet_means.flatten(), "Error": stage_wavelet_stds})
+    print(len(multi_idx), multi_idx.array)
+
+    df = pd.DataFrame(index=multi_idx, data={"Power": stage_wavelet_means, "Error": stage_wavelet_stds})
     # print(df.to_string())
 
     out_fn = os.path.join(output_dir, f"night-{night_idx}-stage-df.pkl")

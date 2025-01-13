@@ -66,29 +66,8 @@ if __name__ == '__main__':
     # Retrieve files
     input_dir_files = glob(os.path.join(h5_input_dir, '*'))
     print(f'Working in directory {h5_input_dir}')
-    sleep_stages_dir_files = glob(os.path.join(sleep_stages_dir, '*'))
 
-    # Identify per night information (1) Interval for each night (2) files for each night
-    nights = prespipe.ieeg.edf_merge_pr05.parse_find(edf_meta_csv, idx=8)
-    night_time_ranges = []
-    nights_h5_set = set()
-
-    for nidx, night in enumerate(nights):
-        for iidx, interval in enumerate(night.intervals):
-            if len(interval) < 1 or not interval.t0:
-                continue
-            night_time_ranges.append((interval.t0, interval.tf))
-            if nidx == night_idx:
-                nights_h5_set.update([tup[1] for tup in interval.files])
-            nights[nidx].intervals[iidx].files = [tup[0] for tup in interval.files]
-
-    file_count = prespipe.ieeg.edf_merge_pr05.verify_pr05_concatenate_ranges(nights)
-
-    # assert len(night_time_ranges) == len(sleep_stages_dir_files), f"{len(night_time_ranges)} vs {len(sleep_stages_dir_files)}"
-
-    h5_files = [fn for fn in input_dir_files if fn in nights_h5_set]
-
-    # assert 132 == len(h5_files), f'file_count = {file_count} vs. len(h5_files) == {len(h5_files)}'
+    h5_files = prespipe.ieeg.edf_merge_pr05.get_night_files(night_idx, edf_meta_csv, input_dir_files, item_idx=8)
 
     # Skip files that have already been processed.
     existing_files = set(glob(os.path.join(output_dir, '*')))

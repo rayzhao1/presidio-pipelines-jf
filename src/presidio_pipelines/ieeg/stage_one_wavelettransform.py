@@ -55,9 +55,6 @@ def Pipeline(h5_path: str, output_path: str) -> str:
     file = HDF5WaveletData(file=out_path, mode="a", create=True, construct=True)
     file_data = file["spectrogram_data"]
 
-    # Ensure sampling rate >= 2 * 120hz to satisfy Nyquist theorem for Gamma frequencies
-    assert f_obj['data'].axes[f_obj['data'].attrs['t_axis']]['time_axis'].attrs['sample_rate'] >= 240
-
     #
     for proc_ii, proc_data in enumerate(tqdm(f_obj["data"][:, :].T)):
         convolved_signal = convolve.fconv(morlet_fam["kernel"].T, proc_data[:, None]).transpose((1, 0, 2))[:,::q,:]

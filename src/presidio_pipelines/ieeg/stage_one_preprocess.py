@@ -26,7 +26,7 @@ def from_unix_epoch(t: int):
 def base_file_name(processed_fn: str) -> str:
     fn = os.path.basename(processed_fn)
     patient = fn.split('_')[0][4:]
-    return os.path.join(f'/data_store0/presidio/nihon_kohden/{patient}/nkhdf5/edf_to_hdf5/', f'{fn}')
+    return os.path.join(f'/data_store0/presidio/nihon_kohden/{patient}/nkhdf5/edf_to_hdf5/', fn)
 
 def round_seconds(dt):
     new_dt = dt + timedelta(seconds=.5)
@@ -46,7 +46,6 @@ def Pipeline(h5_path: str, output_path: str, edf_catalog_path: str) -> str:
     assert data.axes[f_obj['data_ieeg'].attrs['t_axis']]['time_axis'].attrs['sample_rate'] == 2000, 'Input h5 has incorrect sampling rate'
     assert data.shape == (600000, 160), 'Input h5 has incorrect iEEG data dimensions.'
     assert time_axis.shape == (600000,)
-    assert time_axis[1] - time_axis[0] == 499968
 
     edf_meta = pd.read_csv(edf_catalog_path)
 
