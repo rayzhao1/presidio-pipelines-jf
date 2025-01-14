@@ -57,7 +57,7 @@ if __name__ == '__main__':
     print("Starting...", flush=True)
 
     # Collect command-line arguments
-    assert len(sys.argv) == 5, f'Expected 5, got {sys.argv}'
+    assert len(sys.argv) == 5, f'Expected 4, got {sys.argv}'
     h5_input_dir = sys.argv[1]
     output_dir = sys.argv[2]
     edf_meta_csv = sys.argv[3]
@@ -67,7 +67,8 @@ if __name__ == '__main__':
     input_dir_files = glob(os.path.join(h5_input_dir, '*'))
     print(f'Working in directory {h5_input_dir}')
 
-    h5_files = prespipe.ieeg.edf_merge_pr05.get_night_files(night_idx, edf_meta_csv, input_dir_files, item_idx=8)
+    h5_files = prespipe.ieeg.edf_merge_pr05.get_night_files(edf_meta_csv, night_idx, item_idx=(8,))
+    h5_files = prespipe.ieeg.edf_merge_pr05.basename_intersection(input_dir_files, h5_files)
 
     # Skip files that have already been processed.
     existing_files = set(glob(os.path.join(output_dir, '*')))

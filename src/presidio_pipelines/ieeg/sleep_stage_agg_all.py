@@ -29,7 +29,7 @@ def Pipeline(h5_path: str, edf_path: str, edf_meta_csv: str) -> pd.DataFrame:
 
     print(all_edfs)
 
-    nights = prespipe.ieeg.edf_merge_pr05.parse_find(edf_meta_csv, all_edfs, idx=8)
+    nights = prespipe.ieeg.edf_merge_pr05.parse_nights(edf_meta_csv, all_edfs, idx=8)
 
 
     for night_num, night in enumerate(nights):

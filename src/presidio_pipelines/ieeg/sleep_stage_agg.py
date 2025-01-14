@@ -41,8 +41,11 @@ def convert(s, d):
         return datetime.strptime(s, '%H:%M:%S').replace(year=d.year, month=d.month, day=d.day)
     return datetime.strptime(s, '%H:%M:%S').replace(year=d.year, month=d.month, day=d.day+1)
 
-def process_stages(df, start_dt):
+def process_stages(sleep_stages_dir, start_dt, night_idx):
     """Process scored output files for a day into np arrays."""
+    sleep_stages_fn = os.path.join(sleep_stages_dir, f'PR05_night_{night_idx + 1}.1 Stages_with_file.txt')
+    df = pd.read_fwf(sleep_stages_fn, names=["Time", "State", "drop1", "drop2"]).drop(["drop1", 'drop2'],
+                                                                                                   axis="columns")
     states = df['State'].values.astype(int)
     times = np.array([convert(t, start_dt) for t in df['Time'].values])
     return times, states
@@ -55,9 +58,6 @@ def Pipeline(output_dir, h5_path, npz_paths: list[str], sleep_stages_dir: str, n
 
     channel_labels_array = file_obj['MorletSpectrogram_channellabel_axis'][...][0:150]  # channel labels = 0–149
     assert channel_labels_array.shape == (150, 2), f'`channel_labels_array.shape` is {channel_labels_array.shape}'
-
-    sleep_stages_fn = os.path.join(sleep_stages_dir, f'PR05_night_{night_idx + 1}.1 Stages_with_file.txt')
-    sleep_stages_df = pd.read_fwf(sleep_stages_fn, names=["Time", "State", "drop1", "drop2"]).drop(["drop1", 'drop2'], axis="columns")
 
     waveletpower_arrs = []
     time_axis_h5 = []
@@ -81,7 +81,7 @@ def Pipeline(output_dir, h5_path, npz_paths: list[str], sleep_stages_dir: str, n
 
     morelet_time_axis = [pd.Timestamp(dt).to_pydatetime() for dt in times]
 
-    txt_times, txt_stages = process_stages(sleep_stages_df, morelet_time_axis[0])
+    txt_times, txt_stages = process_stages(sleep_stages_dir, morelet_time_axis[0], night_idx)
     sleep_states = np.tile(txt_stages, 150 * 50)
 
     assert len(morelet_time_axis) == len(txt_times)

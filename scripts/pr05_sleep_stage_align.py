@@ -6,7 +6,7 @@ import pandas as pd
 
 if __name__ == '__main__':
     print(sys.argv)
-    assert len(sys.argv) == 4, 'Incorrect command line arguments'
+    assert len(sys.argv) == 4, f'Expected 3, got {sys.argv}'
 
     h5_input_dir = sys.argv[1]
     edf_meta = pd.read_csv(sys.argv[2])

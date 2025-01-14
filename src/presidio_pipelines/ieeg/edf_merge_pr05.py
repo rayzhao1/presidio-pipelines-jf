@@ -48,7 +48,7 @@ def get_first_date(csv_in: str) -> datetime.datetime:
         return str_to_time(first_row[3])
 
 
-def parse_find(csv_in: str, all_files=None, idx=None, margin=datetime.timedelta(minutes=1)) -> list[Night]:
+def parse_nights(csv_in: str, all_files=None, idx=None, margin=datetime.timedelta(minutes=1)) -> list[Night]:
     """Iterate through 'csv_in' and return a list of lists, where each sublist contains an contiguous_interval of EDF file names
        such that each EDF is less than 'margin' away from the previous file in time. This implementation relies on the
        fact that csv_in is sorted in time-chronological order. All returned EDF files are also constrained to be in the
@@ -87,7 +87,8 @@ def parse_find(csv_in: str, all_files=None, idx=None, margin=datetime.timedelta(
 
             # Add to list subsection, if the file exists.
             if idx:
-                curr_interval.add((curr_name, row[idx]))
+                vals = tuple([curr_name] + [row[i] for i in idx])
+                curr_interval.add(vals)
             else:
                 curr_interval.add(curr_name)
 
@@ -140,31 +141,55 @@ def verify_pr05_concatenate_ranges(nights):
                                          range(2399, 2531)], 'Night 9 files to be concatenated are wrong.'
     return 9 * 132
 
-def get_night_files(night_idx, edf_meta_csv, input_files=[], item_idx=None):
-    """Produce an ordered list of 'item_idx'th entry of 'edf_meta_csv' for night 'night_idx'
+def basename_intersection(a, b):
+    """Return files in `a` that have the same dirname (regardless of extension) as files in `b`,
+       while preserve the ordering from b.
+
+       Use case:
+        a = unordered list of file paths obtained from glob.glob.
+        b = ordered list of file paths obtained from get_night_files().
+
+        basename_intersection(a, b) returns a list that orders the entries of `a` based on `b`, and
+        can be used on or off the server.
+       """
+    dirname = os.path.dirname(a[0])
+    a = set([os.path.basename(fn).split('.')[0] for fn in a])
+    return [os.path.join(dirname, os.path.basename(fn)) for fn in b if os.path.basename(fn).split('.')[0] in a]
+
+
+def get_night_files(edf_meta_csv, night_idx=None, item_idx=None, return_intervals=False):
+    """Produce an ordered list of item_idx'th entry of edf_meta_csv for night 'night_idx'
        corresponding to files that are in 'input_files'.
        - Eg. get_night_files(0, csv, lst, 8) -> Get an ordered list of the h5_paths of the 1st
-         night, given that the file exists in lst.
+         night, given that the file exists in input_files.
     """
-    nights = parse_find(edf_meta_csv, idx=item_idx)
-    item_lst = []
+    nights = parse_nights(edf_meta_csv, idx=item_idx)
+
+    night_to_items = {i:[] for i in range(len(nights))}
+    night_time_ranges = []
+
     for nidx, night in enumerate(nights):
         for iidx, interval in enumerate(night.intervals):
             if len(interval) < 1 or not interval.t0:
                 continue
-            if nidx == night_idx:
-                item_lst.extend([tup[1] for tup in interval.files])
+            night_to_items[nidx].extend([tup[1:] for tup in interval.files])
+            assert len(night_to_items[nidx]) == 132
+            night_time_ranges.append((interval.t0, interval.tf))
             # Modify interval files so they are in right format to be verifed.
             nights[nidx].intervals[iidx].files = [tup[0] for tup in interval.files]
 
     verify_pr05_concatenate_ranges(nights)
 
-    assert len(item_lst) == 132
-    dirname = ''
-    if input_files:
-        dirname = os.path.dirname(input_files[0])
-        input_files = set([os.path.basename(fn).split('.')[0] for fn in input_files])
-    return [os.path.join(dirname, os.path.basename(i)) for i in item_lst if os.path.basename(i).split('.')[0] in input_files] or item_lst
+    if night_idx is not None:
+        res = night_to_items[night_idx]
+        if return_intervals:
+            return res, night_time_ranges
+        return res
+    else:
+        if return_intervals:
+            return night_to_items, night_time_ranges
+        return night_to_items
+
 
 if __name__ == "__main__":  # can get rid of
     # Process command-line args
@@ -189,7 +214,7 @@ if __name__ == "__main__":  # can get rid of
     os.chdir(EDFS_PATH)
     all_edfs: set[str] = set(os.listdir())
     os.chdir(PATIENT_PATH)
-    nights: list[Night] = parse_find(os.path.join(CATALOG_PATH, csv_catalog), all_edfs)
+    nights: list[Night] = parse_nights(os.path.join(CATALOG_PATH, csv_catalog), all_edfs)
     out_dir = os.path.join(SRC_PATH, f'out-{PATIENT}-{tag}')
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)

@@ -37,7 +37,7 @@ def Pipeline(output_dir, npz_paths, night_idx) -> str:
     night_ieeg_data = np.vstack(ieeg_arrs)
     night_time_axis = np.hstack(times_arrs)
 
-    ieeg_fn = os.path.join(output_dir, f'output-n{night_idx}')
+    ieeg_fn = os.path.join(output_dir, f'output-n{night_idx}.npz')
     np.savez(ieeg_fn, ieeg_data=night_ieeg_data, times_axis=night_time_axis)
     assert ieeg_fn in glob(os.path.join(output_dir, '*'))
 

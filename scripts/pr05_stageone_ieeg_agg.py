@@ -19,17 +19,14 @@ if __name__ == '__main__':
     print(f'[Preprocess] Working in directory {h5_input_dir}')
 
     input_dir_files = glob(os.path.join(h5_input_dir, '*'))
+    input_npz_files = [fn for fn in input_dir_files if '.npz' in fn]
 
     h5_file = next(fn for fn in input_dir_files if 'preprocess_wavelettransform_meanwaveletpower' in fn and 'npz' not in fn)
 
-    fn_prefix = os.path.dirname(
-        next(fn for fn in input_dir_files if 'preprocess_wavelettransform_meanwaveletpower' in fn and 'npz' not in fn))
-    ordered_npz_paths = prespipe.ieeg.edf_merge_pr05.get_night_files(night_idx, edf_meta_csv, input_dir_files, item_idx=8)
-    ordered_npz_paths = [os.path.join(fn_prefix, f"{os.path.basename(fn)[:-3]}_preprocess_wavelettransform_meanwaveletpower.npz") for fn in ordered_npz_paths]
+    fn_prefix = os.path.dirname(h5_file)
+    h5_files = prespipe.ieeg.edf_merge_pr05.get_night_files(night_idx, edf_meta_csv, item_idx=8)
+    ordered_npz_paths = [os.path.join(fn_prefix, f"{os.path.basename(fn)[:-3]}_preprocess_wavelettransform_meanwaveletpower.npz") for fn in h5_files]
 
-    input_npz_files = [fn for fn in input_dir_files if '.npz' in fn]
-
-    assert len(input_npz_files) == len(ordered_npz_paths), f'len(input_npz_files) == {len(input_npz_files)} vs. len(ordered_npz_paths) == {len(ordered_npz_paths)}'
     assert Counter(input_npz_files) == Counter(ordered_npz_paths), 'Did not receive expected npz files.'
 
     print("Starting single night DataFrame creation...")

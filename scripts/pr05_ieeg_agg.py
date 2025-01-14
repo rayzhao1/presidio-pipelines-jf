@@ -11,24 +11,21 @@ if __name__ == '__main__':
     print("Starting...", flush=True)
 
     # Collect command-line arguments
-    assert len(sys.argv) == 5, f'Expected 5, got {sys.argv}'
+    assert len(sys.argv) == 5, f'Expected 4, got {sys.argv}'
     h5_input_dir = sys.argv[1]
     output_dir = sys.argv[2]
     edf_meta_csv = sys.argv[3]
     night_idx = int(sys.argv[4])
 
-    # Retrieve files
-    input_dir_files = glob(os.path.join(h5_input_dir, '*'))
     print(f'Working in directory {h5_input_dir}')
 
-    h5_files = prespipe.ieeg.edf_merge_pr05.get_night_files(night_idx, edf_meta_csv, input_dir_files, item_idx=8)
-    ordered_npz_paths = [f'{fn[:-2]}npz' for fn in h5_files]
-    print(ordered_npz_paths)
-
+    # Retrieve files
+    input_dir_files = glob(os.path.join(h5_input_dir, '*'))
     input_npz_files = [fn for fn in input_dir_files if '.npz' in fn]
 
-    assert len(input_npz_files) == len(
-        ordered_npz_paths), f'len(input_npz_files) == {len(input_npz_files)} vs. len(ordered_npz_paths) == {len(ordered_npz_paths)}'
+    h5_files = prespipe.ieeg.edf_merge_pr05.get_night_files(night_idx, edf_meta_csv, item_idx=(8,))
+    ordered_npz_paths = [f'{fn[:-2]}npz' for fn in h5_files]
+
     assert Counter(input_npz_files) == Counter(ordered_npz_paths), 'Did not receive expected npz files.'
 
     prespipe.ieeg.ieeg_agg.Pipeline(output_dir, ordered_npz_paths, night_idx)

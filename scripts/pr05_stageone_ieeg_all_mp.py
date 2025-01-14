@@ -77,7 +77,7 @@ if __name__ == '__main__':
     sleep_stages_dir_files = glob(os.path.join(sleep_stages_dir, '*'))
 
     # Identify per night information (1) Interval for each night (2) files for each night
-    nights = prespipe.ieeg.edf_merge_pr05.parse_find(edf_meta_csv, idx=8)
+    nights = prespipe.ieeg.edf_merge_pr05.parse_nights(edf_meta_csv, idx=8)
     night_time_ranges = []
     nights_h5_set = set()
 
