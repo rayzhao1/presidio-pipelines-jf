@@ -85,7 +85,7 @@ def Pipeline(output_dir, h5_path, npz_paths: list[str], sleep_stages_dir: str, n
     sleep_states = np.tile(txt_stages, 150 * 50)
 
     assert len(morelet_time_axis) == len(txt_times)
-    assert np.all(np.abs(txt_times - morelet_time_axis) <= timedelta(seconds=1))
+    assert np.all(np.abs(txt_times - morelet_time_axis) <= datetime.timedelta(seconds=1))
 
     assert waveletpower.shape == (150, 50, 10 * 132)
     assert sleep_states.shape == (132*10*150*50,)
