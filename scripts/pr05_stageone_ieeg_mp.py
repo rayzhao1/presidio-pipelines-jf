@@ -31,7 +31,7 @@ def map_fn(h5_fn: str, output_dir: str, edf_meta_csv: str, delete=True):
     waveletpower_success = waveletpower_fn in glob(os.path.join(output_dir, '*'))
     if not wavelettransform_success:
         raise ValueError(f"Error performing wavelet transform on file {h5_fn}")
-    os.remove(wavelettransform_fn)
+    # os.remove(wavelettransform_fn) 1.16
 
     # Store needed data
     print(f"Extracting data from {waveletpower_fn}")

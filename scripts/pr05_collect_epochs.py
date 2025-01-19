@@ -52,8 +52,6 @@ if __name__ == '__main__':
     sleep_stages_dir = sys.argv[4]
     night_idx = int(sys.argv[5])
 
-    sleep_stages = [('Wake', 0), ('N1', 1), ('N2', 2), ('N3', 3), ('REM', 5)]
-
     time_and_h5 = prespipe.ieeg.edf_merge_pr05.get_night_files(edf_meta_csv, night_idx=night_idx, item_idx=(2, 8))
     time_range = [prespipe.ieeg.edf_merge_pr05.str_to_time(t) for t, _ in time_and_h5]
     h5_files = [h5 for _, h5 in time_and_h5]
@@ -61,6 +59,8 @@ if __name__ == '__main__':
     txt_times, txt_stages = prespipe.ieeg.sleep_stage_agg.process_stages(sleep_stages_dir, time_range[0], night_idx)
 
     res = h5py.File(os.path.join(output_dir, f"out-n{night_idx}.h5"), "w")
+
+    sleep_stages = [('Wake', 0), ('N1', 1), ('N2', 2), ('N3', 3), ('REM', 5)]
 
     for stage, idx in sleep_stages:
         grp = res.create_group(stage)
