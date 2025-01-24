@@ -9,7 +9,10 @@ import os
 
 
 def map_fn(h5_fn, output_dir):
-    prespipe.ieeg.stage_one_plv.Pipeline(h5_fn, output_dir)
+    plv = prespipe.ieeg.stage_one_plv.Pipeline(h5_fn, output_dir)
+    out_fn = os.path.join(output_path, f'{os.path.basename(h5_path)[:-3]}_plv.npz')
+    np.savez(out_fn, plv=plv, time_axis=time_axis, cfreqs=cfreqs)
+    assert out_fn in glob(os.path.join(output_dir, '*')), f'Failed to compute PLV for {h5_fn}'
 
 def check(fn):
     bn = os.path.basename(fn)
@@ -26,5 +29,5 @@ if __name__ == '__main__':
 
     proc_inputs = [(fn, output_dir) for fn in h5_files]
 
-    with Pool(1) as p:
+    with Pool(6) as p:
         p.starmap(map_fn, proc_inputs)

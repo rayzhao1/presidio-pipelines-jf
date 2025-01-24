@@ -14,7 +14,6 @@ def map_fn(h5_fn: str, output_dir:str, edf_meta_csv: str):
     ieeg_fn = os.path.join(output_dir, f"{os.path.basename(h5_fn)[:-3]}.npz") # can also do .split('.')[0], but risky if CL arg has "."
 
     np.savez(ieeg_fn, ieeg_arr=ieeg, times_arr=times)
-    # np.save(ieeg_fn, ieeg)
 
     extract_ieeg_success = ieeg_fn in glob(os.path.join(output_dir, '*'))
 
