@@ -9,7 +9,7 @@ import os
 
 
 def map_fn(h5_fn, output_dir):
-    plv = prespipe.ieeg.stage_one_plv.Pipeline(h5_fn, output_dir)
+    plv, time_axis = prespipe.ieeg.stage_one_plv.Pipeline(h5_fn, output_dir)
     out_fn = os.path.join(output_path, f'{os.path.basename(h5_path)[:-3]}_plv.npz')
     np.savez(out_fn, plv=plv, time_axis=time_axis, cfreqs=cfreqs)
     assert out_fn in glob(os.path.join(output_dir, '*')), f'Failed to compute PLV for {h5_fn}'

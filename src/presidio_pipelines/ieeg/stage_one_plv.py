@@ -46,4 +46,4 @@ def Pipeline(h5_path: str) -> str:
     plv = epoch_plv(spectrogram, WINDOW_LEN)
     assert plv.shape == (10, 50, 150, 150), f'plv.shape == {plv.shape}'
 
-    return plv
+    return plv, time_axis, cfreqs

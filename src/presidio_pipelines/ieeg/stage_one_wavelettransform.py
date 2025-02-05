@@ -57,6 +57,8 @@ def Pipeline(h5_path: str, output_path: str) -> str:
 
     #
     for proc_ii, proc_data in enumerate(tqdm(f_obj["data"][:, :].T)):
+        if proc_ii == 1:
+            break
         convolved_signal = convolve.fconv(morlet_fam["kernel"].T, proc_data[:, None]).transpose((1, 0, 2))[:,::q,:]
 
         if file_data.shape == (0, 0, 0):#
