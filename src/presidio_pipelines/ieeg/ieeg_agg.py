@@ -33,11 +33,10 @@ def Pipeline(output_dir, npz_paths, night_idx) -> str:
         ieeg_arrs.append(ieeg)
         times_arrs.append(times)
 
-
     night_ieeg_data = np.vstack(ieeg_arrs)
     night_time_axis = np.hstack(times_arrs)
 
-    ieeg_fn = os.path.join(output_dir, f'output-n{night_idx}.npz')
-    np.savez(ieeg_fn, ieeg_data=night_ieeg_data, times_axis=night_time_axis)
-    assert ieeg_fn in glob(os.path.join(output_dir, '*'))
+    assert night_ieeg_data.shape == (300000 * 1320, 160), f'night_ieeg_data.shape == {night_ieeg_data.shape}'
+    assert night_time_axis.shape == (300000*132,), f'night_time_axis.shape == {night_time_axis.shape}'
 
+    return night_time_axis, night_ieeg_data

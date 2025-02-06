@@ -30,7 +30,29 @@ def epoch_plv(arr, n):
     # Compute PLV over each window, and collect them along the n_samples axis.
     return np.stack([zp.sigproc.connectivity.spectral_synchrony(epoch, 'plv') for epoch in epochs], axis=0)
 
-def Pipeline(h5_path: str) -> str:
+def Pipeline(h5_path, wt_path):
+    with h5py.File(h5_path, 'r') as f:
+        cfreqs = f['MorletFamily_kernel_axis']['CFreq']
+        assert cfreqs.shape == (50,)
+
+    arrs = np.load(wt_path, allow_pickle=True)
+    print(arrs.keys(), flush=True)
+
+    spectrogram = arrs['night_wavelet_data']
+    night_time_axis = arrs['times_axis']
+
+    #assert spectrogram.shape == (50, 300 * 1320, 150), f'arr.shape is {spectrogram.shape}'
+    #assert night_time_axis.shape == (300 * 132,), f'night_time_axis.shape == {night_time_axis.shape}'
+
+    time_axis = night_time_axis[::WINDOW_LEN]
+    #assert time_axis.shape == ((300 * 132) // 30,), f'time_axis.shape == {time_axis.shape}'
+
+    plv = epoch_plv(spectrogram, WINDOW_LEN)
+    #assert plv.shape == ((300 * 132) // 30, 50, 150, 150), f'plv.shape == {plv.shape}'
+
+    return plv, time_axis, cfreqs
+
+def H5Pipeline(h5_path: str) -> str:
     f_obj = apply_reader(path=h5_path, h5interface=HDF5WaveletData)
 
     with h5py.File(h5_path, 'r') as f:

@@ -36,7 +36,7 @@ if __name__ == '__main__':
     input_dir_files = glob(os.path.join(h5_input_dir, '*'))
     print(f'Working in directory {h5_input_dir}')
 
-    h5_files = prespipe.ieeg.edf_merge_pr05.get_night_files(edf_meta_csv, night_idx, item_idx=(8,))
+    h5_files = [tup[0] for tup in prespipe.ieeg.edf_merge_pr05.get_night_files(edf_meta_csv, night_idx, item_idx=(8,))]
     h5_files = prespipe.ieeg.edf_merge_pr05.basename_intersection(input_dir_files, h5_files)
 
     proc_inputs = [(fn, output_dir, edf_meta_csv) for fn in h5_files]
